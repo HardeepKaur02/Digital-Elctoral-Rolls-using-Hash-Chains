@@ -4,6 +4,7 @@ from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, jwt_required
 from routes import initialize_routes
 from d_b import initialize_db
+from blockchain import initialize_blockchain
 from api_constants import mongo_password
 from models import Voter
 import urllib
@@ -27,7 +28,7 @@ app.config["MONGODB_HOST"] = DB_URI
 
 initialize_db(app)
 initialize_routes(api)
-
+initialize_blockchain()
 
 
 if __name__ == '__main__':

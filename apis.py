@@ -110,5 +110,7 @@ class api_login(Resource):
         expires =  datetime.timedelta(minutes=30)
         access_token = create_access_token(identity = str(user.id),expires_delta = expires)
         return make_response(jsonify({"token": access_token}),200)
+
+
     
 
