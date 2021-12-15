@@ -38,11 +38,18 @@ class Voter(db.Document):
 class User(db.Document):
     email = db.EmailField(required = True, unique = True)
     password = db.StringField(required=True, min_length=6)
-    level = db.IntField() 
+    level = db.IntField(default = 1) 
+
+    def to_json(self):
+        return {
+            "email": self.email,
+            "level": self.level
+        }
 
     def hash_password(self):
         self.password = generate_password_hash(self.password).decode('utf8')
 
     def check_password(self,password):
         return check_password_hash(self.password,password)
+
 

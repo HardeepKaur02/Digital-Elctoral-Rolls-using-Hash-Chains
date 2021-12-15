@@ -1,18 +1,38 @@
+from time import time
 from flask import Flask,make_response, request, jsonify
 from flask_restful import Resource
 from flask_jwt_extended import create_access_token, jwt_required
+from d_b import db
 from hashlib import sha256
 import json
-import time
+import datetime
 
+THRESHOLD = 0
 
-class Block:
-    def __init__(self, index, transactions, timestamp, previous_hash):
-        self.index = index
-        self.transactions = transactions
-        self.timestamp = timestamp
-        self.previous_hash = previous_hash
-        self.nonce = 0
+class Transaction(db.EmbeddedDocument):
+    writer = db.EmailField(required = True)
+    writer_level = db.IntField(default=1)
+    details = db.DictField(required = True)
+    def to_json(self):
+        return {
+            "performed by": self.writer,
+            "details": self.details
+        }
+
+### transaction: action, writer, timestamp
+class Block(db.Document):
+    index = db.IntField(required = True, unique=True)
+    transactions = db.ListField(db.EmbeddedDocumentField(Transaction), required = True)
+    timestamp = db.StringField(required = True)
+    previous_hash = db.StringField()
+    hash = db.StringField()
+    
+
+    # def __init__(self, index, transactions, timestamp, previous_hash):
+    #     self.index = index
+    #     self.transactions = transactions
+    #     self.timestamp = timestamp
+    #     self.previous_hash = previous_hash
 
     def compute_hash(self):
         """
@@ -23,8 +43,6 @@ class Block:
 
 
 class Blockchain:
-    # difficulty of our PoW algorithm
-    difficulty = 2
 
     def __init__(self):
         self.chain = []
@@ -40,7 +58,7 @@ class Blockchain:
         the chain. The block has index 0, previous_hash as 0, and
         a valid hash.
         """
-        genesis_block = Block(0, [], time.time(), "0")
+        genesis_block = Block(index=0, transactions = [], timestamp= datetime.datetime.now().strftime("%c"),previous_hash = "0")
         genesis_block.hash = genesis_block.compute_hash()
         self.chain.append(genesis_block)
 
@@ -61,71 +79,48 @@ class Blockchain:
         if previous_hash != block.previous_hash:
             return False
 
-        if not self.is_valid_proof(block, proof):
+        if block.compute_hash() != proof:
             return False
 
         block.hash = proof
         self.chain.append(block)
-
+        block.save()
         return True
 
-    def is_valid_proof(self, block, block_hash):
-        """
-        Check if block_hash is valid hash of block and satisfies
-        the difficulty criteria.
-        """
-        return (block_hash.startswith('0' * Blockchain.difficulty) and
-                block_hash == block.compute_hash())
 
-    def proof_of_work(self, block):
-        """
-        Function that tries different values of nonce to get a hash
-        that satisfies our difficulty criteria.
-        """
-        block.nonce = 0
-
-        computed_hash = block.compute_hash()
-        while not computed_hash.startswith('0' * Blockchain.difficulty):
-            block.nonce += 1
-            computed_hash = block.compute_hash()
-
-        return computed_hash
 
     def add_new_transaction(self, transaction):
         self.unconfirmed_transactions.append(transaction)
+        if len(self.unconfirmed_transactions) > THRESHOLD:
+            self.confirm_transactions()
+            self.unconfirmed_transactions = []
+            chain_data = []
+            for block in blockchain.chain:
+                chain_data.append(block.__dict__)
+            return json.dumps({"length": len(chain_data),
+                            "chain": chain_data})
 
-    def mine(self):
+    def confirm_transactions(self):
         """
         This function serves as an interface to add the pending
-        transactions to the blockchain by adding them to the block
-        and figuring out Proof Of Work.
+        transactions to the blockchain by adding a block containing them.
         """
-        # if not self.unconfirmed_transactions:
-        #     return False
-
         last_block = self.last_block
+        print(last_block.index)
+        new_block = Block(index = (last_block.index + 1),
+                        transactions=self.unconfirmed_transactions,
+                        timestamp=datetime.datetime.now().strftime("%c"),
+                        previous_hash=last_block.hash)
+        proof = new_block.compute_hash()
+        self.add_block(new_block,proof)
 
-        new_block = Block(index=last_block.index + 1,
-                          transactions=self.unconfirmed_transactions,
-                          timestamp=time.time(),
-                          previous_hash=last_block.hash)
-
-        proof = self.proof_of_work(new_block)
-        self.add_block(new_block, proof)
-        
-        self.unconfirmed_transactions = []
-        chain_data = []
-        for block in blockchain.chain:
-            chain_data.append(block.__dict__)
-        return json.dumps({"length": len(chain_data),
-                        "chain": chain_data})
-        
-        # return new_block.index
 
 blockchain = Blockchain()
 def initialize_blockchain():
     blockchain.init_blockchain()
 
+def add_transaction(transaction):
+    blockchain.add_new_transaction(transaction)
 
 class api_immutable_database(Resource):
     @jwt_required()
@@ -133,9 +128,14 @@ class api_immutable_database(Resource):
         chain_data = []
         for block in blockchain.chain:
             chain_data.append(block.__dict__)
+        block = blockchain.last_block
+        # if blockchain.is_valid_proof(block,blockchain.proof_of_work()):
+        #     print("Data is untampered")
+        # else:
+        #     print(block.hash, block.compute_hash())
         return json.dumps({"length": len(chain_data),"chain": chain_data})
 
     @jwt_required()
-    def post(self):
+    def post(self,transactions):
         ### add transactions to block ###
-        return blockchain.mine()
+        return blockchain.add_new_transaction(transactions)
