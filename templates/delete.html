@@ -1,0 +1,153 @@
+{% extends "base.html" %} {% block title %}Search{% endblock %} {% block
+    content %}
+
+
+<div class="container" style=" margin: auto; padding: 20px;">
+    <div class="row" style="margin: auto;padding: 10px; display: inline-block; width: 100%; font: 2em; text-align: center;background-color: rgb(236, 122, 169); color: rgb(12, 8, 15); height: 50px;">
+        Delete voter by EPIC ID
+    </div>
+    <div id="by_epic" class="tab-pane panel panel-default fade in active show" style="height: 60%;margin: auto;background-color: cornsilk;">        
+        <div class="panel-body" style="margin: auto;padding: 10px;">
+            <div class="row form-group" style="margin: auto;padding: 5px;">
+
+                <div class="col-md-3 col-xs-3 col-sm-3">
+                    <label class="text-info">Epic Id.&nbsp;</label>
+                </div>
+                
+                <div class="col-md-5 col-xs-5 col-sm-5">
+                    <input type="text" id="epicno" name="epicno" required="required" class="form-control" placeholder="Enter Epic Id">
+                </div>
+
+                <div class="col-md-2 col-xs-2 col-sm-2 text-right" style="margin: auto;">
+                    <button class="btn btn-success btn-sm" type="button" id="btnGet"><i class="fa fa-search"></i>Search</button>
+                </div>
+                <div class="col-md-2 col-xs-2 col-sm-2" style="margin: auto;" >
+                    <button class="btn btn-danger btn-sm" type="reset" id="btnRefresh" disabled> Delete</button>
+                </div>
+                
+            </div>
+        </div>
+        
+        <div id="voter_data" style="">
+            <div class="panel panel-primary">
+                <div class="panel-heading" style="margin: auto;padding: 5px; font-size: 12pt;background-color:wheat;">
+                    Voter Details
+                </div>
+
+                <div class="panel-body" style="margin: auto;padding: 10px;">
+                    <div class="row" align="center">
+                        <div class="col-md-8">
+                            <div class="row" align="center">
+                                <div class="col-md-6">
+                                    <label class="text-info">Name : </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-info">Father Name : </label>
+                                </div>
+                            </div>
+                            <div class="row" align="center">
+                                <div class="col-md-6">
+                                    <input type="text" style="background-color:white" id="voter_name" name="voter_name"  class="form-control col-md-9 col-xs-12 " readonly="">
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" style="background-color:white" id="voter_father_name" name="voter_father_name"  class="form-control col-md-9 col-xs-12 " readonly="">
+                                </div>
+                            </div>
+
+                            <div class="row" align="center">
+                                <div class="col-md-6">
+                                    <label class="text-info">Gender : </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-info">Age: </label>
+                                </div>
+                            </div>
+                            <div class="row" align="center">
+                                <div class="col-md-6">
+                                    <input type="text" style="background-color:white" id="gender" name="gender"  class="form-control col-md-9 col-xs-12 " readonly="">
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" style="background-color:white" id="age" name="age"  class="form-control col-md-9 col-xs-12 " readonly="">
+                                </div>
+                            </div>
+
+                            <div class="row" align="center">
+                                <div class="col-md-6">
+                                    <label class="text-info">Address : </label>
+                                </div>
+                            </div>        
+                            <div class="row" align="center">
+                                <div class="col-md-6">
+                                    <input type="text" style="background-color:white" id="address" name="address"  class="form-control col-md-9 col-xs-12 " readonly="">
+                                </div>
+                            </div>        
+                        </div>
+                        <div class="col-md-4">
+                            <div class="row" align="center">
+                                <div class="col-md-12">
+                                    <label class="text-info">Photo : </label>
+                                </div>
+                            </div>        
+                            <div class="row" align="center">
+                                <div class="col-md-12">
+                                    <input type="image" style="background-color:white; height: 225px;" id="voter_name" name="voter_name"  class="form-control col-md-9 col-xs-12 " readonly="">
+                                </div>
+                            </div>        
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="Officers_result" style="">
+            <div class="panel panel-primary">
+                <div class="panel-heading" style="margin: auto;padding: 5px; font-size: 12pt;background-color:wheat;">
+                    Constituency Details
+                </div>
+                <div class="panel-body" style="margin: auto;padding: 10px;">
+                    <div class="row" align="center">
+                        <div class="col-md-6">
+                            <label class="text-info">Part Number : </label>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-info">Part Name : </label>
+                        </div>
+                    </div>
+
+                    <div class="row" align="center">
+                        <div class="col-md-6">
+                            <input type="text" style="background-color:white" id="voter_name" name="voter_name"  class="form-control col-md-9 col-xs-12 " readonly="">
+                        </div>
+                        <div class="col-md-6">
+                            <input type="text" style="background-color:white" id="voter_name" name="voter_name"  class="form-control col-md-9 col-xs-12 " readonly="">
+                        </div>
+                    </div>
+
+                    <div class="row" align="center">
+                        <div class="col-md-6">
+                            <label class="text-info">Assembly Constituency : </label>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="text-info">Parliamentary Constituency : </label>
+                        </div>
+                    </div>
+
+                    <div class="row" align="center">
+                        <div class="col-md-6">
+                            <input type="text" style="background-color:white" id="voter_name" name="voter_name"  class="form-control col-md-9 col-xs-12 " readonly="">
+                        </div>
+                        <div class="col-md-6">
+                            <input type="text" style="background-color:white" id="voter_name" name="voter_name"  class="form-control col-md-9 col-xs-12 " readonly="">
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+
+{% endblock %}

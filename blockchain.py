@@ -139,3 +139,7 @@ class api_immutable_database(Resource):
     def post(self,transactions):
         ### add transactions to block ###
         return blockchain.add_new_transaction(transactions)
+
+    @jwt_required()
+    def delete(self):
+        return make_response("Forbidden",403)

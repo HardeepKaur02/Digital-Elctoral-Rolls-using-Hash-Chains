@@ -1,0 +1,78 @@
+{% extends "base.html" %} {% block title %}Home{% endblock %} {% block content
+    %}
+
+
+    <div class="container" style=" margin: auto; padding: 20px;">
+      <div class="row" style="margin: auto;padding: 10px; display: inline-block; width: 100%; font: 2em; text-align: center;background-color: rgb(236, 122, 169); color: rgb(12, 8, 15); height: 50px;">
+          Welcome
+      </div>
+
+
+      <div id="data" style="">
+        <div class="panel panel-primary">
+            <div class="panel-heading" style="margin: auto;padding: 5px; font-size: 12pt;background-color:wheat;">
+                My level of access details
+            </div>
+            <div class="panel-body" style="margin: auto;padding: 10px;">
+                <div class="row" align="center">
+                    <div class="col-md-4">
+                        <label class="text-info">Email : </label>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-info">Registered Voter : </label>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-info">Level of Access : </label>
+                    </div>
+                </div>
+
+                <div class="row" align="center">
+                    <div class="col-md-4">
+                        <div style="background-color:white"  class="form-control col-md-9 col-xs-12 " >{{data["email"]}}</div> 
+                    </div>
+                    <div class="col-md-4">
+                        <div style="background-color:white"  class="form-control col-md-9 col-xs-12 " >{{data["registered_voter"]}}</div> 
+                    </div>
+                    <div class="col-md-4">
+                        <div style="background-color:white"  class="form-control col-md-9 col-xs-12 " >{{data["level"]}}</div> 
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="data_actions" style="">
+      <div class="panel panel-primary">
+          <div class="panel-heading" style="margin: auto;padding: 5px; font-size: 12pt;background-color:wheat;">
+              Actions Available to me
+          </div>
+          <div class="panel-body" style="margin: auto;padding: 10px;">
+              <div class="row" align="center">
+                {% for item in data["actions"] %}
+                  {% if item == "SEARCH" %}
+                    <div class="col-md-3" style="padding: 5px;">
+                      <button onclick="document.location='http://127.0.0.1:5000/api/search' " style="background-color:white; width: 100% ;">{{item}}</button>                    
+                    </div>
+                  {% elif item == "INSERT" %}
+                  <div class="col-md-3" style="padding: 5px;">
+                    <button onclick="document.location='http://127.0.0.1:5000/api/insert' " style="background-color:white; width: 100% ;">{{item}}</button>
+                  </div>
+                  {% elif item == "UPDATE" %}
+                  <div class="col-md-3" style="padding: 5px;">
+                    <button onclick="document.location='http://127.0.0.1:5000/api/update' " style="background-color:white; width: 100% ;">{{item}}</button>
+                  </div>
+                  {% elif item == "DELETE" %}
+                  <div class="col-md-3" style="padding: 5px;">
+                    <button onclick="document.location='http://127.0.0.1:5000/api/delete' " style="background-color:white; width: 100% ;">{{item}}</button>
+                  </div>
+                  {% endif %}
+                {% endfor %}
+            
+              </div>
+
+          </div>
+      </div>
+  </div>
+
+    {% endblock %}
