@@ -1,7 +1,6 @@
 {% extends "base.html" %} {% block title %}Search{% endblock %} {% block
     content %}
 
-
 <div class="container" style=" margin: auto; padding: 20px;">
     <div class="row" style="margin: auto;padding: 10px; display: inline-block; width: 100%; font: 2em; text-align: center;background-color: rgb(236, 122, 169); color: rgb(12, 8, 15); height: 50px;">
         Insert new voter
@@ -152,6 +151,7 @@
     
     document.getElementById('Insert_btn').addEventListener('click', function(event) {
         var ref = 'http://127.0.0.1:5000/api/voters';
+        // fetch(ref).then(res=>res.json()).then(data=>console.log(data));
         fetch(ref,{method: 'POST',headers: {'Content-Type': 'application/json'},body: JSON.stringify({
             EPIC_ID: document.getElementById('epicno').value,
             name: document.getElementById('voter_name').value,
@@ -162,8 +162,10 @@
             parliamentary_constituency: document.getElementById('pc_name').value,
             father_name: document.getElementById('voter_father_name').value,
             part_number: document.getElementById('part_number').value,
-            part_name:  document.getElementById('part_name').value
-        })}).then(response => {return response.json()}).then(data => console.log(data));
+            part_name:  document.getElementById('part_name').value,
+            block_status: 1,
+            prev_hash: '0'
+        })}).then(response => {return response});
         });        
 
 </script>

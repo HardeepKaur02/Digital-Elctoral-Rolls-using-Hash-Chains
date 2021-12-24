@@ -94,12 +94,6 @@
 </div>
 
 <script>
-    function my_func() {
-        var input1 = document.getElementById("voter_data");
-        var input2 = document.getElementById("constituency_data");
-        input1.style.display = 'block';
-        input2.style.display = 'block';
-    }
     function stateHandle() {
         if (document.getElementById("epicno").value==="") {
             document.getElementById("Search_btn").disabled = true; //button remains disabled
@@ -114,10 +108,10 @@
         var voter_id = document.getElementById("epicno").value;
         fetch(ref.concat(voter_id)).then(response => response.json()).then(data => {
             document.getElementById("voter_name").value = data.name;
-            document.getElementById("voter_f_name").value = data['father name'];
+            document.getElementById("voter_f_name").value = data['father_name'];
             document.getElementById("voter_age").value = data.age;
             document.getElementById("voter_data").style.display = 'block';
-            document.getElementById("ac_name").value = data['assembly constituency'];
+            document.getElementById("ac_name").value = data['assembly_constituency'];
             document.getElementById("pc_name").value = data['parliamentary_constituency'];
             document.getElementById("constituency_data").style.display = 'block';
 

@@ -1,31 +1,60 @@
 from flask_bcrypt import generate_password_hash, check_password_hash
 from d_b import db
 from flask_login import UserMixin
+import json
+from hashlib import sha256
+import datetime 
+
+class Metadata(db.Document):
+    writer = db.ReferenceField('User',required=True)
+    backward_ptr = db.ReferenceField('Voter')
+    timestamp = db.StringField(required = True)
+    ### required = True for proof ###
+    proof = db.DictField()
+
+    def to_json(self):
+        return {
+            "writer": self.writer,
+            "timestamp": self.timestamp,
+            "proof": self.proof
+        }
 
 class Voter(db.Document):
-    EPIC_ID = db.StringField(unique = True, required = True)
+    EPIC_ID = db.StringField(required = True)
     name = db.StringField(required = True)
     age = db.IntField(required = True)
     gender = db.StringField(required = True)
     address = db.StringField(required = True)
     father_name = db.StringField(required = True)
-    photo = db.ImageField()
-    polling_station = db.StringField()
-    part_number = db.IntField()
-    part_name = db.StringField()
+    part_number = db.IntField(required = True)
+    part_name = db.StringField(required = True)
     assembly_constituency = db.StringField(required = True)
-    assembly_constituency_number = db.IntField()
-    parliamentary_constituency = db.StringField()
+    parliamentary_constituency = db.StringField(required = True)
+    assembly_constituency_number = db.IntField(default=0)
+    polling_stations = db.ListField(db.StringField(default = []))
+    photo = db.ImageField()
 
-    # polling_stations = db.ListField(db.IntField())
+    block_status = db.IntField(default = 1)
+    forward_ptr = db.ReferenceField('Voter')
+    metadata = db.ReferenceField('Metadata')
+    prev_hash = db.StringField()
+    hash = db.StringField()
+
+    def compute_hash(self):
+        """
+        A function that return the hash of the entire voter data.
+        """
+        block_string = json.dumps(self.to_json_complete(), sort_keys=True)
+        return sha256(block_string.encode()).hexdigest()
+
 
     def to_json(self):
         return {
             "EPIC_ID": self.EPIC_ID,
             "name": self.name,
             "age": self.age,
-            "father name": self.father_name,
-            "assembly constituency": self.assembly_constituency,
+            "father_name": self.father_name,
+            "assembly_constituency": self.assembly_constituency,
             "parliamentary_constituency": self.parliamentary_constituency
         }
 
@@ -37,13 +66,13 @@ class Voter(db.Document):
             "age": self.age,
             "gender": self.gender,
             "address": self.address,
-            "father name": self.father_name,
-            "polling station": self.polling_station,
-            "part number" : self.part_number,
-            "part name": self.part_name,
-            "assembly constituency": self.assembly_constituency,
+            "father_name": self.father_name,
+            "part_number" : self.part_number,
+            "part_name": self.part_name,
+            "assembly_constituency": self.assembly_constituency,
             "assembly_constituency_number": self.assembly_constituency_number,
-            "parliamentary_constituency": self.parliamentary_constituency
+            "parliamentary_constituency": self.parliamentary_constituency,
+            "polling_stations": self.polling_stations
         }
 
 

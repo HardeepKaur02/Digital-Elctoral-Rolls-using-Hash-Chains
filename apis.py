@@ -2,7 +2,7 @@ from flask import Flask,make_response, request, jsonify, render_template, flash,
 from flask_restful import Resource
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from flask_login import login_user, login_required, logout_user, current_user
-from models import Authorised_Officer, Voter, User
+from models import Authorised_Officer, Metadata, Voter, User
 from blockchain import Transaction, add_transaction
 import datetime
 import time
@@ -95,10 +95,7 @@ class api_delete(Resource):
 class api_voters(Resource):
     @login_required
     def get(self):
-        # headers = request.headers
-        # print(headers)
-        # user_id = get_jwt_identity()
-        # user = User.objects.get(id=user_id)
+        headers = request.headers
         user = current_user
         #### ACCESSS CHECK - Authorised Officer ####
         if user.level >= query_level['GET_ALL']:
@@ -107,19 +104,22 @@ class api_voters(Resource):
             #### ACCESS CONTROL - Authorised for action in concerned Constituency ####
             for assembly_constituency in auth_officer.assembly_constituencies:
                 for voter in Voter.objects(assembly_constituency = assembly_constituency):
-                    voters.append(voter.to_json())
+                    while voter.block_status == 0:
+                        voter = voter.forward_ptr
+                    if voter.block_status == 1:
+                        voters.append(voter.to_json())
             return make_response(jsonify(voters),200)
         return make_response("Unauthorised Action!",401)
 
-    @login_required
-    def get(self):
-        headers = {'Content-Type': 'text/html'}
-        return make_response(render_template('insert.html',user=current_user),200,headers)
+    # @login_required
+    # def get(self):
+    #     headers = {'Content-Type': 'text/html'}
+    #     return make_response(render_template('insert.html',user=current_user),200,headers)
 
     @login_required
     def post(self):  ### insert a single voter
-        print("WAHEGURU")
-        content = request.form.to_dict()
+        content = request.json
+
         voter_obj = Voter(**content)
         user = current_user
         headers = {'Content-Type': 'text/html'}
@@ -128,12 +128,22 @@ class api_voters(Resource):
             auth_officer = user.level_2_id
             #### ACCESS CHECK - Authorised for action in concerned Constituency ####
             if voter_obj.assembly_constituency in auth_officer.assembly_constituencies:
+                already_present = Voter.objects(EPIC_ID = voter_obj.EPIC_ID).first()
+                if already_present:
+                    flash('Voter id already registered',category = 'error')
+                    return make_response(render_template('insert.html',user=current_user),401,headers)
+
+                voter_obj.hash = voter_obj.compute_hash()
+                metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {})
+                metadata.save()
+                voter_obj.metadata = metadata
                 voter_obj.save()
                 transaction_data = {"action": "INSERT","voter_data": voter_obj.to_json(), "timestamp": datetime.datetime.now().strftime("%c")}
                 transaction = Transaction(writer=user['email'],writer_level = user['level'],details = transaction_data)
                 add_transaction(transaction)
                 flash('Voter inserted successfully',category = 'success')
-                return make_response(render_template('insert.html',user=current_user),200,headers)
+                data = {"email":user.email, "registered_voter": user.registered_voter, "level": user.level,"actions":[]}                
+                return make_response(render_template('home.html',user=current_user,data=data),200,headers)
         flash('Unauthorised Action!',category = 'error')
         return make_response(render_template('insert.html',user=current_user),401,headers)
 
@@ -143,33 +153,50 @@ class api_voter(Resource):
     def get(self,voter_id):
         voter_obj = Voter.objects(EPIC_ID = voter_id).first()
         if voter_obj:
-            # user_id = get_jwt_identity()
-            # user = User.objects.get(id=user_id)
-            user = current_user
-            action = "SEARCH_2"
-            #### ACCESSS CHECK - Authorised Officer ####
-            if user.level >= query_level[action]:
-                auth_officer = user.level_2_id
-                #### ACCESS CHECK - Authorised for action in concerned Constituency ####
-                if voter_obj.assembly_constituency in auth_officer.assembly_constituencies:
-                    return make_response(jsonify(voter_obj.to_json_complete()),200)            
-            return make_response(jsonify(voter_obj.to_json()),200)            
-        else:
-            return make_response("Voter data not found",404)
+            while(voter_obj.block_status==0):
+                voter_obj = voter_obj.forward_ptr
+            if voter_obj.block_status == 1:
+                user = current_user
+                action = "SEARCH_2"
+                #### ACCESSS CHECK - Authorised Officer ####
+                if user.level >= query_level[action]:
+                    auth_officer = user.level_2_id
+                    #### ACCESS CHECK - Authorised for action in concerned Constituency ####
+                    if voter_obj.assembly_constituency in auth_officer.assembly_constituencies:
+                        return make_response(jsonify(voter_obj.to_json_complete()),200)            
+                return make_response(jsonify(voter_obj.to_json()),200)                
+        return make_response("Voter data not found",404)
 
     @login_required
     def put(self,voter_id):
         content = request.json ## data to be updated
         voter_obj = Voter.objects(EPIC_ID = voter_id).first()
-        # user_id = get_jwt_identity()
-        # user = User.objects.get(id=user_id)
+        while voter_obj.block_status==0:
+            voter_obj = voter_obj.forward_ptr
+        if voter_obj.block_status == 2:
+            flash('Voter doesn\'t exist',category='error')
+            return make_response("Voter doesn't exist",204)
         user = current_user
         #### ACCESSS CHECK - Authorised Officer ####
         if user.level >= query_level['UPDATE']:
             auth_officer = user.level_2_id
             #### ACCESS CHECK - Authorised for action in concerned Constituency ####
             if voter_obj.assembly_constituency in auth_officer.assembly_constituencies:
-                voter_obj.update(**content)
+                prev_content = voter_obj.to_json_complete()
+                for key in content:
+                    prev_content[key] = content[key]
+                new_voter_obj = Voter(**prev_content)
+                new_voter_obj.prev_hash = voter_obj.hash    
+                new_voter_obj.hash = new_voter_obj.compute_hash()
+                if voter_obj.hash == new_voter_obj.hash:
+                    return make_response("No update required",231)
+                new_voter_obj.save()
+                metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {},backward_ptr = voter_obj)
+                metadata.save()
+                new_voter_obj.metadata = metadata
+                update_meta = {"block_status":0,"forward_ptr": new_voter_obj}
+                voter_obj.update(**update_meta)
+
                 transaction_data = {"action": "UPDATE","voter_data": voter_obj.to_json(), "timestamp": datetime.datetime.now().strftime("%c")}
                 transaction = Transaction(writer=user['email'],writer_level = user['level'],details = transaction_data)
                 add_transaction(transaction)
@@ -180,18 +207,34 @@ class api_voter(Resource):
     @login_required
     def delete(self,voter_id):
         voter_obj = Voter.objects(EPIC_ID = voter_id).first()
-        # user_id = get_jwt_identity()
-        # user = User.objects.get(id=user_id)
+        while voter_obj.block_status==0:
+            voter_obj = voter_obj.forward_ptr
+        if voter_obj.block_status == 2:
+            flash('Voter doesn\'t exist',category='error')
+            return make_response("Voter doesn't exist",204)
         user = current_user
         #### ACCESSS CHECK - Authorised Officer ####
         if user.level >= query_level['DELETE']:
             auth_officer = user.level_2_id
             #### ACCESS CHECK - Authorised for action in concerned Constituency ####
             if voter_obj.assembly_constituency in auth_officer.assembly_constituencies:
+                prev_content = voter_obj.to_json_complete()
+                new_voter_obj = Voter(**prev_content)
+                new_voter_obj.prev_hash = voter_obj.hash                
+                new_voter_obj.hash = voter_obj.compute_hash()
+                metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {},backward_ptr = voter_obj)
+                metadata.save()
+                new_voter_obj.metadata = metadata
+                new_voter_obj.block_status = 2
+                new_voter_obj.save()
+
+                update_meta = {"block_status":0,"forward_ptr": new_voter_obj}
+                voter_obj.update(**update_meta)
+                
                 transaction_data = {"action": "DELETE","voter_data": voter_obj.to_json(), "timestamp": datetime.datetime.now().strftime("%c")}
                 transaction = Transaction(writer=user['email'],writer_level = user['level'],details = transaction_data)
                 add_transaction(transaction)
-                voter_obj.delete()
+            
                 return make_response("Success",200)
         return make_response("Unauthorised Action!",401)
 
@@ -269,7 +312,7 @@ class api_login(Resource):
                 if query_level[action]<=user.level:
                     actions.append(action)
             print(*actions)
-            data = {"email":user.email, "registered_voter": user.registered_voter, "level": user.level,"actions":actions}
+            data = {"email":user.email, "registered_voter": user.registered_voter, "level": user.level,"actions":actions,"token":header_val}
             # return make_response(redirect(url_for('api_home')),301,headers)
             return make_response(render_template('home.html',user=current_user,data=data),200,headers)
 
