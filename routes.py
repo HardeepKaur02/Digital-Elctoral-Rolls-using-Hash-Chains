@@ -1,4 +1,4 @@
-from apis import api_auth_officer, api_voter,api_voters,api_db,api_signup,api_login, api_home, api_insert, api_search, api_update, api_delete
+from apis import api_auth_officer, api_merkle_tree, api_query_consistency, api_query_membership, api_voter,api_voters,api_db,api_signup,api_login, api_home, api_insert, api_search, api_update, api_delete
 from blockchain import api_immutable_database
 
 def initialize_routes(api):
@@ -14,5 +14,11 @@ def initialize_routes(api):
     api.add_resource(api_insert, '/api/insert')
     api.add_resource(api_update, '/api/update')
     api.add_resource(api_delete, '/api/delete')
+    api.add_resource(api_merkle_tree, '/api/merkle')
+    api.add_resource(api_query_membership, '/api/merkle/member/<voter_id>')
+    api.add_resource(api_query_consistency, '/api/merkle/consistent/<num_voters>')
+    
+    
+    
     
     

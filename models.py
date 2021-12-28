@@ -5,9 +5,13 @@ import json
 from hashlib import sha256
 import datetime 
 
+MERKLE_TREE_TYPE = 0
+## 0: EPIC Id
+## 1: six fields as in to_json())
+## 2: twelve fields as in to_json_complete()
+
 class Metadata(db.Document):
     writer = db.ReferenceField('User',required=True)
-    backward_ptr = db.ReferenceField('Voter')
     timestamp = db.StringField(required = True)
     ### required = True for proof ###
     proof = db.DictField()
@@ -35,18 +39,22 @@ class Voter(db.Document):
     photo = db.ImageField()
 
     block_status = db.IntField(default = 1)
-    forward_ptr = db.ReferenceField('Voter')
+    backward_ptr = db.ReferenceField('Voter')
     metadata = db.ReferenceField('Metadata')
-    prev_hash = db.StringField()
+    prev_hash = db.StringField(default = '0')
     hash = db.StringField()
 
     def compute_hash(self):
         """
         A function that return the hash of the entire voter data.
         """
-        block_string = json.dumps(self.to_json_complete(), sort_keys=True)
+        dic = self.to_json_complete()
+        dic["prev_hash"] = self.prev_hash
+        block_string = json.dumps(dic, sort_keys=True)
         return sha256(block_string.encode()).hexdigest()
 
+    def compute_prev_hash(self):
+        return self.backward_ptr.compute_hash()
 
     def to_json(self):
         return {
@@ -74,6 +82,16 @@ class Voter(db.Document):
             "parliamentary_constituency": self.parliamentary_constituency,
             "polling_stations": self.polling_stations
         }
+    
+    def __repr__(self) -> str:
+        dic = {}
+        if MERKLE_TREE_TYPE == 0:
+            dic = {"EPIC_ID":self.EPIC_ID}
+        if MERKLE_TREE_TYPE == 1:
+            dic = self.to_json()
+        if MERKLE_TREE_TYPE == 2:
+            dic = self.to_json_complete()
+        return json.dumps(dic)
 
 
 class User(db.Document,UserMixin):

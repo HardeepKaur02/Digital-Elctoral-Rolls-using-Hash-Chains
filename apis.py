@@ -4,9 +4,13 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from flask_login import login_user, login_required, logout_user, current_user
 from models import Authorised_Officer, Metadata, Voter, User
 from blockchain import Transaction, add_transaction
+from merkle import MerkleTree, data_verification, verify_consistency
 import datetime
 import time
+import json
+from d_b import db
 
+merkle_tree = None
 
 '''
 
@@ -32,33 +36,71 @@ query_level = {"SEARCH":1, "INSERT":2, "UPDATE":2, "DELETE":2, "SEARCH_2": 2, "G
 
 #### JUST FOR CONVENIENCE WHILE TESTING ####
 class api_db(Resource):
-    @jwt_required()
-    def post(self): ### insert voters in bulk
-        voter1_obj = Voter(
-            EPIC_ID = "ABC3456789",
-            name = "Voter3",
-            age = 49,
-            gender = "Female",
-            address = "Delhi",
-            father_name = "Father3"
-        )
-        voter1_obj.save()
+    @login_required
+    def get(self): ### insert voters in bulk
+        
+        id = 1230001
+        voters = []
+        for i in range(10):
+            id1 = "PAL" + str(id)
+            id+=1
+            id2 = "RUL" + str(id)
+            id+=1  
+            voter1_obj = Voter(
+                EPIC_ID = id1,
+                name = "Voter",
+                age = 49,
+                gender = "Female",
+                address = "Delhi",
+                father_name = "Father1",
+                part_number = 2,
+                part_name = "test",
+                assembly_constituency = "Khanna",
+                parliamentary_constituency = "Fatehgarh Sahib"
+            )
 
-        voter2_obj = Voter(
-            EPIC_ID = "ABC4567890",
-            name = "Voter4",
-            age = 18,
-            gender = "Male",
-            address = "Kota, Rajasthan",
-            father_name = "Father4"
-        )
-        voter2_obj.save()
-        user_id = get_jwt_identity()
-        user = User.objects.get(id=user_id)
-        transaction_data = {"action": "INSERT ","voter_data": {voter1_obj.to_json(),voter2_obj.to_json()}, "timestamp": datetime.datetime.now().strftime("%c")}
+            voter2_obj = Voter(
+                EPIC_ID = id2,
+                name = "Voter",
+                age = 18,
+                gender = "Male",
+                address = "Kota, Rajasthan",
+                father_name = "Father4",
+                part_number = 2,
+                part_name = "test",
+                assembly_constituency = "Payal",
+                parliamentary_constituency = "Fatehgarh Sahib"
+            )
+            user = current_user
+            headers = {'Content-Type': 'text/html'}
+            #### ACCESSS CHECK - Authorised Officer ####
+            if user.level >= query_level['INSERT']:
+                auth_officer = user.level_2_id
+                #### ACCESS CHECK - Authorised for action in concerned Constituency ####
+                if voter1_obj.assembly_constituency in auth_officer.assembly_constituencies:
+                    metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {})
+                    metadata.save()
+                    voter1_obj.metadata = metadata
+                    voter1_obj.hash = voter1_obj.compute_hash()
+                    voter1_obj.save()
+                    voters.append(voter1_obj)
+                if voter2_obj.assembly_constituency in auth_officer.assembly_constituencies:
+                    metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {})
+                    metadata.save()
+                    voter2_obj.metadata = metadata
+                    voter2_obj.hash = voter2_obj.compute_hash()
+                    voter2_obj.save()
+                    voters.append(voter2_obj)
+
+        transaction_data = {"action": "DB_POPULATE ","voter_data": [voter1_obj.to_json(),voter2_obj.to_json()], "timestamp": datetime.datetime.now().strftime("%c")}
         transaction = Transaction(writer=user['email'],writer_level = user['level'],details = transaction_data)
         add_transaction(transaction)
-
+        voters = list(map(lambda x: repr(x),voters))
+        global merkle_tree
+        merkle_tree = MerkleTree([voters[0],])
+        for i in range(len(voters)-1):
+            merkle_tree.extend_tree([voters[i+1],])
+        print(merkle_tree.root.hash)
         return make_response("",201)
 
 class api_home(Resource):
@@ -91,6 +133,47 @@ class api_delete(Resource):
         headers = {'Content-Type': 'text/html'}
         return make_response(render_template('delete.html',user=current_user),200,headers)
 
+class api_merkle_tree(Resource):
+    @login_required
+    def get(self):
+        global merkle_tree
+        print(merkle_tree.history)
+        return make_response(merkle_tree.root.hash,200)
+
+class api_query_membership(Resource):
+    @login_required
+    def get(self,voter_id):
+        global merkle_tree
+        voter_dic = {"EPIC_ID":voter_id}
+        voter_str = json.dumps(voter_dic)
+        res = data_verification(merkle_tree,voter_str)
+        if res:
+            print("Waheguru")
+            return make_response("Voter data found",200)
+        else:
+            print("Waheguru Ji")
+            return make_response("Voter data not found",400)
+
+class api_query_consistency(Resource):
+    @login_required
+    def get(self,num_voters):
+        global merkle_tree
+        print(Voter.objects().order_by('metadata'))
+        print("Waheguru")
+        all_voters = Voter.objects().order_by('metadata.timestamp')
+        print(all_voters)
+        print(type(all_voters[0]))
+        print("Waheguru waheguru")
+        voters = []
+        for i in range(int(num_voters)):
+            voters.append(repr(all_voters[i]))
+        res = verify_consistency(merkle_tree,voters)
+        if res:
+            print("Waheguru")
+            return make_response("Database is consistent",200)
+        else:
+            print("Waheguru Ji")
+            return make_response("Database is not consistent",400)
 
 class api_voters(Resource):
     @login_required
@@ -103,11 +186,11 @@ class api_voters(Resource):
             voters = []
             #### ACCESS CONTROL - Authorised for action in concerned Constituency ####
             for assembly_constituency in auth_officer.assembly_constituencies:
-                for voter in Voter.objects(assembly_constituency = assembly_constituency):
-                    while voter.block_status == 0:
-                        voter = voter.forward_ptr
-                    if voter.block_status == 1:
-                        voters.append(voter.to_json())
+                for voter in Voter.objects(assembly_constituency = assembly_constituency, block_status = 1):
+                    # while voter.block_status == 0:
+                    #     voter = voter.forward_ptr
+                    # if voter.block_status == 1:
+                    voters.append(voter.to_json())
             return make_response(jsonify(voters),200)
         return make_response("Unauthorised Action!",401)
 
@@ -128,16 +211,19 @@ class api_voters(Resource):
             auth_officer = user.level_2_id
             #### ACCESS CHECK - Authorised for action in concerned Constituency ####
             if voter_obj.assembly_constituency in auth_officer.assembly_constituencies:
-                already_present = Voter.objects(EPIC_ID = voter_obj.EPIC_ID).first()
+                already_present = Voter.objects(EPIC_ID = voter_obj.EPIC_ID, block_status=1).first()
+
                 if already_present:
                     flash('Voter id already registered',category = 'error')
                     return make_response(render_template('insert.html',user=current_user),401,headers)
 
-                voter_obj.hash = voter_obj.compute_hash()
                 metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {})
                 metadata.save()
                 voter_obj.metadata = metadata
+                voter_obj.hash = voter_obj.compute_hash()
                 voter_obj.save()
+                global merkle_tree
+                merkle_tree.extend_tree([repr(voter_obj)])
                 transaction_data = {"action": "INSERT","voter_data": voter_obj.to_json(), "timestamp": datetime.datetime.now().strftime("%c")}
                 transaction = Transaction(writer=user['email'],writer_level = user['level'],details = transaction_data)
                 add_transaction(transaction)
@@ -151,29 +237,25 @@ class api_voters(Resource):
 class api_voter(Resource):
     @login_required
     def get(self,voter_id):
-        voter_obj = Voter.objects(EPIC_ID = voter_id).first()
+        # voter_obj = Voter.find({"EPIC_ID" : voter_id,"block_status":1})
+        voter_obj = Voter.objects(EPIC_ID = voter_id, block_status=1).first()
         if voter_obj:
-            while(voter_obj.block_status==0):
-                voter_obj = voter_obj.forward_ptr
-            if voter_obj.block_status == 1:
-                user = current_user
-                action = "SEARCH_2"
-                #### ACCESSS CHECK - Authorised Officer ####
-                if user.level >= query_level[action]:
-                    auth_officer = user.level_2_id
-                    #### ACCESS CHECK - Authorised for action in concerned Constituency ####
-                    if voter_obj.assembly_constituency in auth_officer.assembly_constituencies:
-                        return make_response(jsonify(voter_obj.to_json_complete()),200)            
-                return make_response(jsonify(voter_obj.to_json()),200)                
+            user = current_user
+            action = "SEARCH_2"
+            #### ACCESSS CHECK - Authorised Officer ####
+            if user.level >= query_level[action]:
+                auth_officer = user.level_2_id
+                #### ACCESS CHECK - Authorised for action in concerned Constituency ####
+                if voter_obj.assembly_constituency in auth_officer.assembly_constituencies:
+                    return make_response(jsonify(voter_obj.to_json_complete()),200)            
+            return make_response(jsonify(voter_obj.to_json()),200)                
         return make_response("Voter data not found",404)
 
     @login_required
     def put(self,voter_id):
         content = request.json ## data to be updated
-        voter_obj = Voter.objects(EPIC_ID = voter_id).first()
-        while voter_obj.block_status==0:
-            voter_obj = voter_obj.forward_ptr
-        if voter_obj.block_status == 2:
+        voter_obj = Voter.objects(EPIC_ID = voter_id, block_status=1).first()
+        if not voter_obj:
             flash('Voter doesn\'t exist',category='error')
             return make_response("Voter doesn't exist",204)
         user = current_user
@@ -186,18 +268,21 @@ class api_voter(Resource):
                 for key in content:
                     prev_content[key] = content[key]
                 new_voter_obj = Voter(**prev_content)
-                new_voter_obj.prev_hash = voter_obj.hash    
+                metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {})
+                metadata.save()
+                new_voter_obj.metadata = metadata
+                new_voter_obj.backward_ptr = voter_obj
+                new_voter_obj.prev_hash = new_voter_obj.compute_prev_hash()   ### different from voter_obj.hash
                 new_voter_obj.hash = new_voter_obj.compute_hash()
                 if voter_obj.hash == new_voter_obj.hash:
                     return make_response("No update required",231)
                 new_voter_obj.save()
-                metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {},backward_ptr = voter_obj)
-                metadata.save()
-                new_voter_obj.metadata = metadata
-                update_meta = {"block_status":0,"forward_ptr": new_voter_obj}
+                global merkle_tree
+                merkle_tree.extend_tree([repr(new_voter_obj)])
+                update_meta = {"block_status":0}
                 voter_obj.update(**update_meta)
 
-                transaction_data = {"action": "UPDATE","voter_data": voter_obj.to_json(), "timestamp": datetime.datetime.now().strftime("%c")}
+                transaction_data = {"action": "UPDATE","voter_data": new_voter_obj.to_json(), "timestamp": datetime.datetime.now().strftime("%c")}
                 transaction = Transaction(writer=user['email'],writer_level = user['level'],details = transaction_data)
                 add_transaction(transaction)
                 return make_response("Success",200)
@@ -206,10 +291,8 @@ class api_voter(Resource):
 
     @login_required
     def delete(self,voter_id):
-        voter_obj = Voter.objects(EPIC_ID = voter_id).first()
-        while voter_obj.block_status==0:
-            voter_obj = voter_obj.forward_ptr
-        if voter_obj.block_status == 2:
+        voter_obj = Voter.objects(EPIC_ID = voter_id, block_status=1).first()
+        if not voter_obj:
             flash('Voter doesn\'t exist',category='error')
             return make_response("Voter doesn't exist",204)
         user = current_user
@@ -220,18 +303,21 @@ class api_voter(Resource):
             if voter_obj.assembly_constituency in auth_officer.assembly_constituencies:
                 prev_content = voter_obj.to_json_complete()
                 new_voter_obj = Voter(**prev_content)
-                new_voter_obj.prev_hash = voter_obj.hash                
-                new_voter_obj.hash = voter_obj.compute_hash()
-                metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {},backward_ptr = voter_obj)
+                metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {})
                 metadata.save()
                 new_voter_obj.metadata = metadata
+                new_voter_obj.backward_ptr = voter_obj
+                new_voter_obj.prev_hash = new_voter_obj.compute_prev_hash()   ### different from voter_obj.hash
+                new_voter_obj.hash = new_voter_obj.compute_hash()
                 new_voter_obj.block_status = 2
                 new_voter_obj.save()
+                global merkle_tree
+                merkle_tree.extend_tree([repr(new_voter_obj)])
 
-                update_meta = {"block_status":0,"forward_ptr": new_voter_obj}
+                update_meta = {"block_status":0}
                 voter_obj.update(**update_meta)
                 
-                transaction_data = {"action": "DELETE","voter_data": voter_obj.to_json(), "timestamp": datetime.datetime.now().strftime("%c")}
+                transaction_data = {"action": "DELETE","voter_data": new_voter_obj.to_json(), "timestamp": datetime.datetime.now().strftime("%c")}
                 transaction = Transaction(writer=user['email'],writer_level = user['level'],details = transaction_data)
                 add_transaction(transaction)
             
