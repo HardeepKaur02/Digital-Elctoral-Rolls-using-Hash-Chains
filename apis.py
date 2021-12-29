@@ -1,10 +1,11 @@
+from hashlib import new
 from flask import Flask,make_response, request, jsonify, render_template, flash, redirect, url_for
 from flask_restful import Resource
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from flask_login import login_user, login_required, logout_user, current_user
 from models import Authorised_Officer, Metadata, Voter, User
 from blockchain import Transaction, add_transaction
-from merkle import MerkleTree, data_verification, verify_consistency
+from merkle import MerkleTree, data_verification, verify_consistency,rep
 import datetime
 import time
 import json
@@ -31,8 +32,8 @@ DELETE /api/voters/voter_id  -> delete voter from db
 POST /api/db_populate -> adds voters to db in bulk and returns 201 success code with empty response body
 
 '''
-valid_actions = ["SEARCH","INSERT","UPDATE","DELETE"]
-query_level = {"SEARCH":1, "INSERT":2, "UPDATE":2, "DELETE":2, "SEARCH_2": 2, "GET_ALL":2}
+valid_actions = ["SEARCH","INSERT","UPDATE","DELETE","QUERY_DATABASE","QUERY_CONSISTENCY"]
+query_level = {"SEARCH":1, "INSERT":2, "UPDATE":2, "DELETE":2, "SEARCH_2": 2, "GET_ALL":2,"QUERY_DATABASE":1,"QUERY_CONSISTENCY":2}
 
 #### JUST FOR CONVENIENCE WHILE TESTING ####
 class api_db(Resource):
@@ -92,22 +93,42 @@ class api_db(Resource):
                     voter2_obj.save()
                     voters.append(voter2_obj)
 
-        transaction_data = {"action": "DB_POPULATE ","voter_data": [voter1_obj.to_json(),voter2_obj.to_json()], "timestamp": datetime.datetime.now().strftime("%c")}
-        transaction = Transaction(writer=user['email'],writer_level = user['level'],details = transaction_data)
-        add_transaction(transaction)
-        voters = list(map(lambda x: repr(x),voters))
-        global merkle_tree
-        merkle_tree = MerkleTree([voters[0],])
-        for i in range(len(voters)-1):
-            merkle_tree.extend_tree([voters[i+1],])
-        print(merkle_tree.root.hash)
-        return make_response("",201)
+        try:
+            transaction_data = {"action": "DB_POPULATE ","voter_data": [voter1_obj.to_json(),voter2_obj.to_json()], "timestamp": datetime.datetime.now().strftime("%c")}
+            transaction = Transaction(writer=user['email'],writer_level = user['level'],details = transaction_data)
+            add_transaction(transaction)
 
-class api_home(Resource):
+            global merkle_tree
+            voters_repr = list(map(lambda x: repr(x),voters))    
+            merkle_tree = MerkleTree([voters_repr[0],])
+            merkle_tree.obj_history.append(voters[0])
+            merkle_tree.obj_status.append(1)
+            for i in range(len(voters_repr)-2):
+                merkle_tree.extend_tree([voters_repr[i+1],])
+                merkle_tree.obj_history.append(voters[i+1])
+                merkle_tree.obj_status.append(1)
+            merkle_tree.extend_tree([voters_repr[-1],])
+            merkle_tree.obj_history.append(voters[-1])
+            merkle_tree.obj_status.append(1)
+            print(merkle_tree.root.hash)
+            flash("Session started successfully!",category="success")
+            return make_response("",201)
+        except:
+            flash("Couldn't start a session.", category='error')
+            return make_response("",400)
+
+# class api_home(Resource):
+#     @login_required
+#     def get(self):
+#         headers = {'Content-Type': 'text/html'}
+#         return make_response(render_template('home.html',user=current_user),200,headers)
+
+class api_index(Resource):
     @login_required
     def get(self):
         headers = {'Content-Type': 'text/html'}
-        return make_response(render_template('home.html',user=current_user),200,headers)
+        return make_response(render_template('index.html',user=current_user),200,headers)
+
 
 class api_search(Resource):
     @login_required
@@ -136,23 +157,66 @@ class api_delete(Resource):
 class api_merkle_tree(Resource):
     @login_required
     def get(self):
-        global merkle_tree
-        print(merkle_tree.history)
-        return make_response(merkle_tree.root.hash,200)
+        headers = {'Content-Type': 'text/html'}
+        return make_response(render_template('consistent.html',user=current_user),200,headers)
 
 class api_query_membership(Resource):
     @login_required
-    def get(self,voter_id):
+    def get(self):
+        headers = {'Content-Type': 'text/html'}
+        return make_response(render_template('member.html',user=current_user),200,headers)
+
+    # def get(self,voter_id):
+    #     global merkle_tree
+    #     voter_dic = {"EPIC_ID":voter_id}
+    #     voter_str = json.dumps(voter_dic)
+    #     res = data_verification(merkle_tree,voter_str)
+    #     if res:
+    #         print("Waheguru")
+    #         return make_response("Voter data found",200)
+    #     else:
+    #         print("Waheguru Ji")
+    #         return make_response("Voter data not found",400)
+     
+    def post(self):
+        print("Waheguru")
+        content = request.json
+        print(content)
+        code_str = ['0','0','0','0','0','0','0','0']
+        if content['name'] != "":
+            code_str[0] = '1'
+        if content['father_name'] != "":
+            code_str[1] = '1'
+        if content['age'] != "":
+            code_str[2] = '1'
+        if content['gender'] != "":
+            code_str[3] = '1'
+        if content['part_number'] != "":
+            code_str[4] = '1'
+        if content['part_name'] != "":
+            code_str[5] = '1'
+        if content['assembly_constituency'] != "":
+            code_str[6] = '1'
+        if content['parliamentary_constituency'] != "":
+            code_str[7] = '1'
         global merkle_tree
-        voter_dic = {"EPIC_ID":voter_id}
-        voter_str = json.dumps(voter_dic)
-        res = data_verification(merkle_tree,voter_str)
+        # new_leaves = list(map(lambda x: rep(x,code_str),merkle_tree.obj_history))
+        new_leaves = []
+        for i in range(len(merkle_tree.obj_history)):
+            new_leaves.append(rep(merkle_tree.obj_history[i],code_str,active=merkle_tree.obj_status[i]))
+        print(new_leaves)
+        new_merkle = MerkleTree([new_leaves[0],])
+        for i in range(len(new_leaves)-2):
+            new_merkle.extend_tree([new_leaves[i+1],])  
+        new_merkle.extend_tree([new_leaves[-1],],to_print=1)              
+        query = rep(content,code_str,1)
+        res = data_verification(new_merkle,query)
+        print(query)
+        print(res)
         if res:
-            print("Waheguru")
             return make_response("Voter data found",200)
-        else:
-            print("Waheguru Ji")
-            return make_response("Voter data not found",400)
+        return make_response("Voter data not found",400)
+        
 
 class api_query_consistency(Resource):
     @login_required
@@ -224,6 +288,8 @@ class api_voters(Resource):
                 voter_obj.save()
                 global merkle_tree
                 merkle_tree.extend_tree([repr(voter_obj)])
+                merkle_tree.obj_history.append(voter_obj)
+                merkle_tree.obj_status.append(1)
                 transaction_data = {"action": "INSERT","voter_data": voter_obj.to_json(), "timestamp": datetime.datetime.now().strftime("%c")}
                 transaction = Transaction(writer=user['email'],writer_level = user['level'],details = transaction_data)
                 add_transaction(transaction)
@@ -279,13 +345,18 @@ class api_voter(Resource):
                 new_voter_obj.save()
                 global merkle_tree
                 merkle_tree.extend_tree([repr(new_voter_obj)])
+                merkle_tree.obj_history.append(new_voter_obj)
+                merkle_tree.obj_status.append(1)
                 update_meta = {"block_status":0}
                 voter_obj.update(**update_meta)
-
+                j = merkle_tree.obj_history.index(voter_obj)
+                merkle_tree.obj_status[j]=0
                 transaction_data = {"action": "UPDATE","voter_data": new_voter_obj.to_json(), "timestamp": datetime.datetime.now().strftime("%c")}
                 transaction = Transaction(writer=user['email'],writer_level = user['level'],details = transaction_data)
                 add_transaction(transaction)
+                flash("Data updated successfully",category='success')
                 return make_response("Success",200)
+        flash("Updation failed",category='error')
         return make_response("Unauthorised Action!",401)
 
 
@@ -313,15 +384,20 @@ class api_voter(Resource):
                 new_voter_obj.save()
                 global merkle_tree
                 merkle_tree.extend_tree([repr(new_voter_obj)])
+                merkle_tree.obj_history.append(new_voter_obj)
+                merkle_tree.obj_status.append(1)
 
                 update_meta = {"block_status":0}
                 voter_obj.update(**update_meta)
+                j = merkle_tree.obj_history.index(voter_obj)
+                merkle_tree.obj_status[j]=2
                 
                 transaction_data = {"action": "DELETE","voter_data": new_voter_obj.to_json(), "timestamp": datetime.datetime.now().strftime("%c")}
                 transaction = Transaction(writer=user['email'],writer_level = user['level'],details = transaction_data)
                 add_transaction(transaction)
-            
+                flash("Data deleted successfully",category='success')
                 return make_response("Success",200)
+        flash("Updation failed",category='error')
         return make_response("Unauthorised Action!",401)
 
 

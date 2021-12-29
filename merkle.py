@@ -1,5 +1,5 @@
 from hashlib import sha256
-import math
+import math,json
 
 class MerkleNode:
     """
@@ -25,12 +25,20 @@ class MerkleTree:
             self.leaves.append(node)
         self.root = self.build_merkle_tree(self.leaves)
         self.history = {len(self.leaves): self.root.hash}
+        self.obj_history = []
+        self.obj_status=[]
 
-    def build_merkle_tree(self, leaves):
+    def build_merkle_tree(self, leaves,to_print=0):
         """
         Builds the Merkle tree from a list of leaves. In case of an odd number of leaves, the last leaf is duplicated.
         """
         num_leaves = len(leaves)
+        if to_print:
+            print("WAHEGURU")
+            for i in range(num_leaves):
+                print(leaves[i].hash)
+            print("WAHEGURU")
+
         if num_leaves == 1:
             return leaves[0]
 
@@ -45,14 +53,14 @@ class MerkleTree:
 
             i += 2
 
-        return self.build_merkle_tree(parents)
+        return self.build_merkle_tree(parents,to_print)
 
-    def extend_tree(self,new_leaves):
+    def extend_tree(self,new_leaves,to_print=0):
         for leaf in new_leaves:
             node = MerkleNode(self.compute_hash(leaf),leaves=1)
             self.leaves.append(node)
 
-        self.root = self.build_merkle_tree(self.leaves)
+        self.root = self.build_merkle_tree(self.leaves,to_print)
         self.history[len(self.leaves)] = self.root.hash
 
     def create_parent(self, left_child, right_child,leaves=0,level=1):
@@ -72,7 +80,7 @@ class MerkleTree:
         for leaf in self.leaves:
             if leaf.hash == chunk_hash:
                 print("Leaf exists")
-                return self.generate_audit_trail(leaf)
+                return self.generate_audit_trail(leaf,trail=[])
         return False
 
     def generate_audit_trail(self, merkle_node, trail=[]):
@@ -80,7 +88,7 @@ class MerkleTree:
         Generates the audit trail in a bottom-up fashion
         """
         if merkle_node == self.root:
-            trail.append(merkle_node.hash)
+            trail.append([merkle_node.hash,False])
             return trail
 
         # check if the merkle_node is the left child or the right child
@@ -89,10 +97,10 @@ class MerkleTree:
             # since the current node is left child, right child is
             # needed for the audit trail. We'll need this info later
             # for audit proof.
-            trail.append([merkle_node.parent.right_child.hash, not is_left])
+            trail.append([merkle_node.parent.right_child.hash, False])
             return self.generate_audit_trail(merkle_node.parent, trail)
         else:
-            trail.append([merkle_node.parent.left_child.hash, not is_left])
+            trail.append([merkle_node.parent.left_child.hash, True])
             return self.generate_audit_trail(merkle_node.parent, trail)
 
     def consistency_proof(self,m):
@@ -134,6 +142,8 @@ def data_verification(merkle_tree, leaf_data):
     leaf_hash = MerkleTree.compute_hash(leaf_data)
     audit_trail = merkle_tree.get_audit_trail(leaf_hash)
     if not audit_trail:
+        print(leaf_hash)
+        print(leaf_data)
         return False
     print(leaf_hash)
     print(audit_trail)
@@ -158,7 +168,7 @@ def verify_audit_trail(chunk_hash, audit_trail):
         print(proof_till_now)
     
     # verifying the computed root hash against the actual root hash
-    return proof_till_now == audit_trail[-1]
+    return proof_till_now == audit_trail[-1][0]
 
 def old_root(trail):
     if len(trail) == 1:
@@ -184,19 +194,63 @@ def verify_consistency(merkle_tree,prev_chunks):
     print(r_hash,merkle_tree.history)
     return r_hash == merkle_tree.history[m]
 
+def rep(voter_obj,code_str,is_dic=0,active=1):
+    if is_dic:
+        dic = {"EPIC_ID":voter_obj['EPIC_ID']}
+        if(code_str[0]=='1'):
+            dic["name"]=voter_obj['name']
+        if(code_str[1]=='1'):
+            dic["father_name"]=voter_obj['father_name']
+        if(code_str[2]=='1'):
+            dic["age"]= int(voter_obj['age'])
+        if(code_str[3]=='1'):
+            dic["gender"]=voter_obj['gender']
+        if(code_str[4]=='1'):
+            dic["part_number"]= int(voter_obj['part_number'])
+        if(code_str[5]=='1'):
+            dic["part_name"]=voter_obj['part_name']
+        if(code_str[6]=='1'):
+            dic["assembly_constituency"]=voter_obj['assembly_constituency']
+        if(code_str[7]=='1'):
+            dic["parliamentary_constituency"]=voter_obj['parliamentary_constituency']
+        return json.dumps(dic)
+
+    dic = {"EPIC_ID":voter_obj.EPIC_ID}
+    if(code_str[0]=='1'):
+        dic["name"]=voter_obj.name
+    if(code_str[1]=='1'):
+        dic["father_name"]=voter_obj.father_name
+    if(code_str[2]=='1'):
+        dic["age"]=int(voter_obj.age)
+    if(code_str[3]=='1'):
+        dic["gender"]=voter_obj.gender
+    if(code_str[4]=='1'):
+        dic["part_number"]=int(voter_obj.part_number)
+    if(code_str[5]=='1'):
+        dic["part_name"]=voter_obj.part_name
+    if(code_str[6]=='1'):
+        dic["assembly_constituency"]=voter_obj.assembly_constituency
+    if(code_str[7]=='1'):
+        dic["parliamentary_constituency"]=voter_obj.parliamentary_constituency
+    if active!=1:
+        print("waheguru maharaj")
+        dic["block_status"]=active
+    return json.dumps(dic)
 
 # merkle_tree = None
 # def main():
+# global merkle_tree
+# if __name__ == '__main__':
+#     main()
+#     print(merkle_tree.root.hash)
+
 # file = '01234567'
 # chunks = list(file)
-# global merkle_tree
+
 # merkle_tree = MerkleTree([chunks[0],])
 # for i in range(len(chunks)-1):
 #     merkle_tree.extend_tree([chunks[i+1],])
 # print(merkle_tree.root.hash)
-# if __name__ == '__main__':
-#     main()
-#     print(merkle_tree.root.hash)
 
 # chunk_hash = MerkleTree.compute_hash("2")
 # print(chunk_hash)

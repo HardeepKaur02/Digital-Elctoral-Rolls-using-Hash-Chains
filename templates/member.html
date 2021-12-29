@@ -1,0 +1,216 @@
+{% extends "base.html" %} {% block title %}Membership{% endblock %} {% block
+    content %}
+    
+
+<div class="container" style=" margin: auto; padding: 20px; width: 100%;">
+    <div class="row" style="margin: auto;padding: 10px; display: inline-block; width: 100%; font: 2em; text-align: center;background-color: rgb(236, 122, 169); color: rgb(12, 8, 15); height: 50px;">
+        Query membership in database 
+    </div>
+    <div id="by_epic" class="tab-pane panel panel-default fade in active show" style="height: 60%;margin: auto;background-color: cornsilk;">        
+        <div class="panel-body" style="margin: auto;padding: 10px;">
+            <div class="row form-group" style="margin: auto;padding: 5px;">
+
+                <div class="col-md-3 col-xs-3 col-sm-3">
+                    <label class="text-info">Epic Id.&nbsp;</label>
+                </div>
+                
+                <div class="col-md-5 col-xs-5 col-sm-5">
+                    <input type="text" id="epicno" name="epicno" required="required" class="form-control" placeholder="Enter Epic Id">
+                </div>
+
+                <div class="col-md-2 col-xs-2 col-sm-2 text-right" style="margin: auto;">
+                    <button class="btn btn-success btn-sm" type="button" id="Search_btn" ><i class="fa fa-search"></i> Search</button>
+                </div>
+                <div class="col-md-2 col-xs-2 col-sm-2" style="margin: auto;">
+                    <button class="btn btn-danger btn-sm" type="reset" id="Reset_btn"><i class="fa fa-refresh"></i> Reset</button>
+                </div>
+                
+            </div>
+        </div>
+
+
+        <div class="panel panel-primary container">
+            <div class="panel-heading row" style="margin: auto;padding: 5px; font-size: 12pt;background-color:wheat;">
+                Voter Details
+            </div>
+
+            <div class="row" style="margin: auto;padding: 5px; font-size: 12pt;">
+                <div class="col-sm-3">
+                    <input type = "radio" name="r_name" id="r_name" onclick="my_func1()" />Name
+                </div>
+                <div class="col-sm-3">
+                    <input type = "radio" name="r_f_name" id="r_f_name" onclick="my_func2()" />Father Name
+                </div>
+                <div class="col-sm-3">
+                    <input type = "radio" name="r_age" id="r_age" onclick="my_func3()"/>Age
+                </div>
+                <div class="col-sm-3">
+                    <input type = "radio" name="r_gender" id="r_gender" onclick="my_func4()"/>Gender
+                </div>
+
+            </div>
+            <div class="row input_row" style="margin: auto;padding: 5px; font-size: 12pt;">
+                <div class="col-sm-3" id="r1" style = "visibility: hidden;" >
+                    <input type = "text" name="name" id="name" style="background-color:white"  class="form-control col-md-9 col-xs-12 "/>
+                </div>
+                <div class="col-sm-3" id="r2" style = "visibility: hidden;">
+                    <input type = "text" name="f_name" id="f_name" style="background-color:white"  class="form-control col-md-9 col-xs-12 "/>
+                </div>
+                <div class="col-sm-3" id="r3" style = "visibility: hidden;">
+                    <input type = "text" name="age" id="age" style="background-color:white"  class="form-control col-md-9 col-xs-12 "/>
+                </div>
+                <div class="col-sm-3" id="r4" style = "visibility: hidden;">
+                    <input type = "text" name="gender" id="gender" style="background-color:white"  class="form-control col-md-9 col-xs-12 "/>
+                </div>
+
+            </div>
+
+
+
+
+            <div class="panel-heading row" style="margin: auto;padding: 5px; font-size: 12pt;background-color:wheat;">
+                Constituency Details
+            </div>
+
+            <div class="row" style="margin: auto;padding: 5px; font-size: 12pt;">
+                <div class="col-sm-3">
+                    <input type = "radio" name="part_number" id="r_part_number" onclick="my_func5()"/>Part Number
+                </div>
+                <div class="col-sm-3">
+                    <input type = "radio" name="part_name" id="r_part_name" onclick="my_func6()"/>Part Name
+                </div>
+                <div class="col-sm-3">
+                    <input type = "radio" name="ac_name" id="r_ac_name" onclick="my_func7()"/>Assembly Constituency
+                </div>
+                <div class="col-sm-3">
+                    <input type = "radio" name="pc_name" id="r_pc_name" onclick="my_func8()"/>Parliamentary Constituency
+                </div>
+
+            </div>
+            <div class="row input_row" style="margin: auto;padding: 5px; font-size: 12pt;">
+                <div class="col-sm-3" id="r21" style="visibility: hidden;">
+                    <input type = "text" name="name" id="part_number"   class="form-control col-md-9 col-xs-12 "/>
+                </div>
+                <div class="col-sm-3" id="r22" style="visibility: hidden;">
+                    <input type = "text" name="f_name" id="part_name"   class="form-control col-md-9 col-xs-12 "/>
+                </div>
+                <div class="col-sm-3" id="r23" style="visibility: hidden;">
+                    <input type = "text" name="age" id="ac_name"  class="form-control col-md-9 col-xs-12 "/>
+                </div>
+                <div class="col-sm-3" id="r24" style="visibility: hidden;">
+                    <input type = "text" name="gender" id="pc_name"   class="form-control col-md-9 col-xs-12 "/>
+                </div>
+
+            </div>
+
+    </div>
+</div>
+<script>
+    function my_func1() {
+        var input = document.getElementById("r1");
+        if (input.style.visibility == 'hidden') {
+            input.style.visibility = 'visible';
+        }
+        else{
+            input.style.visibility = 'hidden';
+            document.getElementById('name').value = "";
+            document.getElementById('r_name').checked = false;
+        }
+    }
+
+    function my_func2() {
+        var input = document.getElementById("r2");
+        if (input.style.visibility == 'hidden') {
+            input.style.visibility = 'visible';
+        }
+        else{
+            input.style.visibility = 'hidden';
+            document.getElementById('f_name').value = "";
+            document.getElementById('r_f_name').checked = false;
+        }
+    }
+    function my_func3() {
+        var input = document.getElementById("r3");
+        if (input.style.visibility == 'hidden') {
+            input.style.visibility = 'visible';
+        }
+        else{
+            input.style.visibility = 'hidden';
+            document.getElementById('age').value = "";
+            document.getElementById('r_age').checked = false;
+        }
+    }
+    function my_func4() {
+        var input = document.getElementById("r4");
+        if (input.style.visibility == 'hidden') {
+            input.style.visibility = 'visible';
+        }
+        else{
+            input.style.visibility = 'hidden';
+            document.getElementById('gender').value = "";
+            document.getElementById('r_gender').checked = false;
+        }
+    }
+    function my_func5() {
+        var input = document.getElementById("r21");
+        if (input.style.visibility == 'hidden') {
+            input.style.visibility = 'visible';
+        }
+        else{
+            input.style.visibility = 'hidden';
+            document.getElementById('part_number').value = "";
+            document.getElementById('r_part_number').checked = false;
+        }
+    }
+    function my_func6() {
+        var input = document.getElementById("r22");
+        if (input.style.visibility == 'hidden') {
+            input.style.visibility = 'visible';
+        }
+        else{
+            input.style.visibility = 'hidden';
+            document.getElementById('part_name').value = "";
+            document.getElementById('r_part_name').checked = false;
+        }
+    }
+    function my_func7() {
+        var input = document.getElementById("r23");
+        if (input.style.visibility == 'hidden') {
+            input.style.visibility = 'visible';
+        }
+        else{
+            input.style.visibility = 'hidden';
+            document.getElementById('ac_name').value = "";
+            document.getElementById('r_ac_name').checked = false;
+        }
+    }
+    function my_func8() {
+        var input = document.getElementById("r24");
+        if (input.style.visibility == 'hidden') {
+            input.style.visibility = 'visible';
+        }
+        else{
+            input.style.visibility = 'hidden';
+            document.getElementById('pc_name').value = "";
+            document.getElementById('r_pc_name').checked = false;
+        }
+    }
+    document.getElementById('Search_btn').addEventListener('click', function(event) {
+        var ref = 'http://127.0.0.1:5000/api/merkle/member';
+        // fetch(ref).then(res=>res.json()).then(data=>console.log(data));
+        fetch(ref,{method: 'POST',headers: {'Content-Type': 'application/json'},body: JSON.stringify({
+            EPIC_ID: document.getElementById('epicno').value,
+            name: document.getElementById('name').value,
+            father_name: document.getElementById('f_name').value,
+            age: document.getElementById('age').value,
+            gender: document.getElementById('gender').value,
+            part_number: document.getElementById('part_number').value,
+            part_name:  document.getElementById('part_name').value,
+            assembly_constituency: document.getElementById('ac_name').value,
+            parliamentary_constituency: document.getElementById('pc_name').value
+        })}).then(response => {console.log(response);return response});
+        });        
+
+</script>
+
+{% endblock %}

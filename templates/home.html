@@ -66,6 +66,16 @@
                   <div class="col-md-3" style="padding: 5px;">
                     <button onclick="document.location='http://127.0.0.1:5000/api/delete' " style="background-color:white; width: 100% ;">{{item}}</button>
                   </div>
+                  {% elif item == "QUERY_DATABASE" %}
+                  <div class="col-md-3" style="padding: 5px;">
+                    <button onclick="document.location='http://127.0.0.1:5000/api/merkle/member' " style="background-color:white; width: 100% ;">{{item}}</button>
+                  </div>
+                  {% elif item == "QUERY_CONSISTENCY" %}
+                  <div class="col-md-3" style="padding: 5px;">
+                    <button onclick="document.location='http://127.0.0.1:5000/api/merkle/consistent' " style="background-color:white; width: 100% ;">{{item}}</button>
+                  </div>
+
+
                   {% endif %}
                 {% endfor %}
             

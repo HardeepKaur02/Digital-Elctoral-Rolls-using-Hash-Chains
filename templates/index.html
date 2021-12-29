@@ -1,0 +1,49 @@
+{% extends "base.html" %} {% block title %}Index{% endblock %} {% block
+    content %}
+
+<style>
+    .btn{
+        margin: auto;
+        width: 50%;
+        align-self: center;
+        padding: 20px;
+        text-align: center;
+    }
+    
+    </style>
+    
+
+<div class="container bg-dark" style="margin: 40px auto;padding: 15px;width: 50%;text-align: center;">
+    <div class="row" id="start"  >
+        <div class="btn" >
+            <button onclick="myfunc()" style="font-size: 22px;"  >Start new session</button>
+        </div>
+    </div>
+    <div class="row" id="signup" style="display: none;">
+        <div class="btn " >
+            <button onclick="document.location = 'http://127.0.0.1:5000/api/auth/signup' " style="font-size: 22px;" >Sign Up</button>
+        </div>
+    </div>
+    <div class="row" id="login" style="display: none;">
+        <div class="btn " >
+            <button onclick="document.location = 'http://127.0.0.1:5000/api/auth/login' " style="font-size: 22px;" >Log In</button>
+        </div>
+    </div>
+
+
+</div>
+
+<script>
+
+
+    function myfunc(){
+        var ref = 'http://127.0.0.1:5000/api/db_populate';
+        fetch(ref).then(res => console.log(res));
+        document.getElementById('start').style.display = 'none';
+        document.getElementById('signup').style.display = 'block';
+        document.getElementById('login').style.display = 'block';
+
+}
+</script>
+
+{% endblock %}

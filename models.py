@@ -65,6 +65,16 @@ class Voter(db.Document):
             "assembly_constituency": self.assembly_constituency,
             "parliamentary_constituency": self.parliamentary_constituency
         }
+    def to_json2(self):
+        return {
+            "EPIC_ID": self.EPIC_ID,
+            "name": self.name,
+            "age": self.age,
+            "father_name": self.father_name,
+            "assembly_constituency": self.assembly_constituency,
+            "parliamentary_constituency": self.parliamentary_constituency,
+            "block_status": self.block_status
+        }
 
 
     def to_json_complete(self):

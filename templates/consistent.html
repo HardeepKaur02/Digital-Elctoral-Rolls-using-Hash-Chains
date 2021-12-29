@@ -1,0 +1,50 @@
+{% extends "base.html" %} {% block title %}Consistent{% endblock %} {% block
+    content %}
+    
+
+<div class="container" style=" margin: auto; padding: 20px;">
+    <div class="row" style="margin: auto;padding: 10px; display: inline-block; width: 100%; font: 2em; text-align: center;background-color: rgb(236, 122, 169); color: rgb(12, 8, 15); height: 50px;">
+        Verify Database Consistency
+    </div>
+    <div id="by_epic" class="tab-pane panel panel-default fade in active show" style="height: 60%;margin: auto;background-color: cornsilk;">        
+        <div class="panel-body" style="margin: auto;padding: 10px;">
+            <div class="row form-group" style="margin: auto;padding: 5px;">
+
+                <div class="col-md-3 col-xs-3 col-sm-3">
+                    <label class="text-info">Number of blocks at old timestamp&nbsp;</label>
+                </div>
+                
+                <div class="col-md-5 col-xs-5 col-sm-5">
+                    <input type="text" id="num_leaves" name="num_leaves" required="required" class="form-control" placeholder="Enter no. of blocks">
+                </div>
+
+                <div class="col-md-2 col-xs-2 col-sm-2 text-right" style="margin: auto;">
+                    <button class="btn btn-success btn-sm" type="button" id="Verify_btn" onclick="myfunc()" ><i class="fa fa-search"></i> Verify</button>
+                </div>
+                <div class="col-md-2 col-xs-2 col-sm-2" style="margin: auto;">
+                    <button class="btn btn-danger btn-sm" type="reset" id="btnRefresh"><i class="fa fa-refresh"></i> Reset</button>
+                </div>
+                
+            </div>
+            <div class="row form-group" style="margin: auto;padding: 5px;text-align: center;">
+                <div class="col-md-5 col-xs-5 col-sm-5">
+                    <input type="text" id="result" name="result" required="required" class="form-control" readonly="">
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function myfunc(){
+        var ref = 'http://127.0.0.1:5000/api/merkle/consistent/';
+        var num_leaves = document.getElementById('num_leaves').value;
+        fetch(ref.concat(num_leaves)).then(res=>{
+            console.log(res);
+            document.getElementById('result').value = res.text();
+        });
+    }
+</script>
+
+{% endblock %}
