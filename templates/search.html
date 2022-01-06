@@ -22,7 +22,7 @@
                     <button class="btn btn-success btn-sm" type="button" id="Search_btn" ><i class="fa fa-search"></i> Search</button>
                 </div>
                 <div class="col-md-2 col-xs-2 col-sm-2" style="margin: auto;">
-                    <button class="btn btn-danger btn-sm" type="reset" id="btnRefresh"><i class="fa fa-refresh"></i> Reset</button>
+                    <button class="btn btn-danger btn-sm" type="reset" id="Reset_btn"><i class="fa fa-refresh"></i> Reset</button>
                 </div>
                 
             </div>
@@ -118,6 +118,15 @@
             console.log(data);
         });
         });        
+        document.getElementById('Reset_btn').addEventListener('click', function(event) {
+            document.getElementById("voter_name").value = '';
+            document.getElementById("voter_f_name").value ="";
+            document.getElementById("voter_age").value ="";
+            document.getElementById("voter_data").style.display = 'none';
+            document.getElementById("ac_name").value = "";
+            document.getElementById("pc_name").value = "";
+            document.getElementById("constituency_data").style.display = 'none';
+        });
 
 </script>
 

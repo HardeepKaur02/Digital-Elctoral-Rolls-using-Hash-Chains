@@ -1,106 +1,121 @@
-{% extends "base.html" %} {% block title %}Sign Up{% endblock %} {% block
-    content %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+      integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+      crossorigin="anonymous"
+    />
+  </head>
+  <body>
 
-  <script>
-    function myFunction() {
-        var input1 = document.getElementById("firstName");
-        var input2 = document.getElementById("voter");
-        if (document.getElementById("is_voter").checked){
-          input1.placeholder = "Enter EPIC ID";
-          document.getElementById("First_entry").innerHTML = "EPIC ID";
-          input2.value = "1";
-        }
-        if (document.getElementById("not_voter").checked){
-          input1.placeholder = "Enter Name";
-          document.getElementById("First_entry").innerHTML = "Name";
-          input2.value = "0";
-        } 
-        document.getElementById("see_val").innerHTML = input2.value;
-    }
-  </script>
-  <style>
-    .form-group, .heading{
-      margin: auto;
-      width: 50%;
-      padding: 10px;
-      text-align: center;
-    }
-    .form-control{
-      text-align: center;
-    }
-  </style>
-     
+    <script>
+      function myFunction() {
+          var input1 = document.getElementById("firstName");
+          var input2 = document.getElementById("voter");
+          if (document.getElementById("is_voter").checked){
+            input1.placeholder = "Enter EPIC ID";
+            document.getElementById("First_entry").innerHTML = "EPIC ID";
+            input2.value = "1";
+          }
+          if (document.getElementById("not_voter").checked){
+            input1.placeholder = "Enter Name";
+            document.getElementById("First_entry").innerHTML = "Name";
+            input2.value = "0";
+          } 
+          document.getElementById("see_val").innerHTML = input2.value;
+      }
+    </script>
+    <style>
+      .form-group, .heading{
+        margin: auto;
+        width: 50%;
+        padding: 10px;
+        text-align: center;
+      }
+      .form-control{
+        text-align: center;
+      }
+    </style>
+      
 
-  <div class="container">
-    <div class="row">
-      <div class="heading">
-        <h3 >Sign Up</h3> 
+    <div class="container">
+      <div class="row">
+        <div class="heading">
+          <h3 >Sign Up</h3> 
+        </div>
       </div>
-    </div>
-    <div class="form1">
-      <form onchange="myFunction()"  id="radio-buttons" action="" align="center">
-        <div class="row">
-          <div class="col-sm-6">
-            <input name="option" type="radio" checked = "checked" id="is_voter" /> I have EPIC ID
+      <div class="form1">
+        <form onchange="myFunction()"  id="radio-buttons" action="" align="center">
+          <div class="row">
+            <div class="col-sm-6">
+              <input name="option" type="radio" checked = "checked" id="is_voter" /> I have EPIC ID
+            </div>
+            <div class="col-sm-6">
+              <input name="option" type="radio" id="not_voter"/> I don't have EPIC ID
+            </div>
           </div>
-          <div class="col-sm-6">
-            <input name="option" type="radio" id="not_voter"/> I don't have EPIC ID
+        </form>
+      </div>
+      <div class="form2" align="center">
+        <form method="POST">
+          <div class="hidden-div" style="padding: 5px" >
+            <button id="see_val" hidden="true">90</button>
+            <input type="number" id = "voter" name="voter" value = "1" hidden="true" />
           </div>
-        </div>
-      </form>
+          <div class="form-group " >
+            <label for="firstName" id="First_entry">EPIC ID</label>
+            <input 
+              type="text"
+              class="form-control"
+              id="firstName"
+              name="firstName"
+              placeholder="Enter EPIC ID (ABC1234567)"
+            />
+          </div>
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input
+              type="email"
+              class="form-control"
+              id="email"
+              name="email"
+              placeholder="Enter email"
+            />
+          </div>
+          <div class="form-group">
+            <label for="password1">Password</label>
+            <input
+              type="password"
+              class="form-control"
+              id="password1"
+              name="password1"
+              placeholder="Enter password"
+            />
+          </div>
+          <div class="form-group">
+            <label for="password2">Password (Confirm)</label>
+            <input
+              type="password"
+              class="form-control"
+              id="password2"
+              name="password2"
+              placeholder="Confirm password"
+            />
+          </div>
+          <br />
+          <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+      </div>
+
     </div>
-    <div class="form2" align="center">
-      <form method="POST">
-        <div class="hidden-div" style="padding: 5px" >
-          <button id="see_val" hidden="true">90</button>
-          <input type="number" id = "voter" name="voter" value = "1" hidden="true" />
-        </div>
-        <div class="form-group " >
-          <label for="firstName" id="First_entry">EPIC ID</label>
-          <input 
-            type="text"
-            class="form-control"
-            id="firstName"
-            name="firstName"
-            placeholder="Enter EPIC ID (ABC1234567)"
-          />
-        </div>
-        <div class="form-group">
-          <label for="email">Email Address</label>
-          <input
-            type="email"
-            class="form-control"
-            id="email"
-            name="email"
-            placeholder="Enter email"
-          />
-        </div>
-        <div class="form-group">
-          <label for="password1">Password</label>
-          <input
-            type="password"
-            class="form-control"
-            id="password1"
-            name="password1"
-            placeholder="Enter password"
-          />
-        </div>
-        <div class="form-group">
-          <label for="password2">Password (Confirm)</label>
-          <input
-            type="password"
-            class="form-control"
-            id="password2"
-            name="password2"
-            placeholder="Confirm password"
-          />
-        </div>
-        <br />
-        <button type="submit" class="btn btn-primary">Submit</button>
-      </form>
-    </div>
-
-  </div>
-
-
-    {% endblock %}
+  </body>
+</html>

@@ -10,8 +10,10 @@ MERKLE_TREE_TYPE = 0
 ## 1: six fields as in to_json())
 ## 2: twelve fields as in to_json_complete()
 
+
+
 class Metadata(db.Document):
-    writer = db.ReferenceField('User',required=True)
+    writer = db.StringField()
     timestamp = db.StringField(required = True)
     ### required = True for proof ###
     proof = db.DictField()
@@ -43,6 +45,8 @@ class Voter(db.Document):
     metadata = db.ReferenceField('Metadata')
     prev_hash = db.StringField(default = '0')
     hash = db.StringField()
+    # signature = db.StringField(required=True)
+    signature = db.BinaryField()
 
     def compute_hash(self):
         """
@@ -73,7 +77,10 @@ class Voter(db.Document):
             "father_name": self.father_name,
             "assembly_constituency": self.assembly_constituency,
             "parliamentary_constituency": self.parliamentary_constituency,
-            "block_status": self.block_status
+            "block_status": self.block_status,
+            "prev_hash": self.prev_hash,
+            "hash": self.hash,
+            "metadata":self.metadata.to_json()
         }
 
 
@@ -110,7 +117,7 @@ class User(db.Document,UserMixin):
     level = db.IntField(default = 1) 
     level_2_id = db.ReferenceField('Authorised_Officer')
     registered_voter = db.IntField(default=0)
-    voter = db.ReferenceField('Voter',unique=True)
+    voter = db.ReferenceField('Voter')
 
     def to_json(self):
         return {
@@ -119,9 +126,11 @@ class User(db.Document,UserMixin):
         }
 
     def hash_password(self):
-        self.password = generate_password_hash(self.password).decode('utf8')
+        self.password = generate_password_hash(self.password).decode('utf-8')
+        
 
     def check_password(self,password):
+        # return password == self.password
         return check_password_hash(self.password,password)
 
 
@@ -129,6 +138,7 @@ class Authorised_Officer(db.Document):
     auth_id = db.StringField(required = True,unique=True)
     email = db.EmailField(required=True)
     name = db.StringField(required = True)
+    public_key = db.StringField(required=True)
     assembly_constituencies = db.ListField(db.StringField())
     parliamentary_constituencies = db.ListField(db.StringField())
 

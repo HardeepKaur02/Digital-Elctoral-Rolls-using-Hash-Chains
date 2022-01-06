@@ -10,6 +10,10 @@ import datetime
 import time
 import json
 from d_b import db
+from Crypto.Signature import PKCS1_v1_5
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import RSA
+import os
 
 merkle_tree = None
 
@@ -32,20 +36,19 @@ DELETE /api/voters/voter_id  -> delete voter from db
 POST /api/db_populate -> adds voters to db in bulk and returns 201 success code with empty response body
 
 '''
-valid_actions = ["SEARCH","INSERT","UPDATE","DELETE","QUERY_DATABASE","QUERY_CONSISTENCY"]
-query_level = {"SEARCH":1, "INSERT":2, "UPDATE":2, "DELETE":2, "SEARCH_2": 2, "GET_ALL":2,"QUERY_DATABASE":1,"QUERY_CONSISTENCY":2}
+valid_actions = ["SEARCH","INSERT","UPDATE","DELETE","QUERY_DATABASE","QUERY_CONSISTENCY","SHOW_DB"]
+query_level = {"SEARCH":1, "INSERT":2, "UPDATE":2, "DELETE":2, "SEARCH_2": 2, "GET_ALL":2,"QUERY_DATABASE":1,"QUERY_CONSISTENCY":2,"SHOW_DB":2}
 
 #### JUST FOR CONVENIENCE WHILE TESTING ####
 class api_db(Resource):
-    @login_required
+    # @login_required
     def get(self): ### insert voters in bulk
         
         id = 1230001
         voters = []
         for i in range(10):
-            id1 = "PAL" + str(id)
-            id+=1
-            id2 = "RUL" + str(id)
+            id1 = "RAL" + str(id)
+            id2 = "GUL" + str(id)
             id+=1  
             voter1_obj = Voter(
                 EPIC_ID = id1,
@@ -57,7 +60,8 @@ class api_db(Resource):
                 part_number = 2,
                 part_name = "test",
                 assembly_constituency = "Khanna",
-                parliamentary_constituency = "Fatehgarh Sahib"
+                parliamentary_constituency = "Fatehgarh Sahib",
+                signature = bytes("", 'utf-8')
             )
 
             voter2_obj = Voter(
@@ -70,34 +74,21 @@ class api_db(Resource):
                 part_number = 2,
                 part_name = "test",
                 assembly_constituency = "Payal",
-                parliamentary_constituency = "Fatehgarh Sahib"
+                parliamentary_constituency = "Fatehgarh Sahib",
+                signature = bytes("", 'utf-8')
             )
-            user = current_user
-            headers = {'Content-Type': 'text/html'}
-            #### ACCESSS CHECK - Authorised Officer ####
-            if user.level >= query_level['INSERT']:
-                auth_officer = user.level_2_id
-                #### ACCESS CHECK - Authorised for action in concerned Constituency ####
-                if voter1_obj.assembly_constituency in auth_officer.assembly_constituencies:
-                    metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {})
-                    metadata.save()
-                    voter1_obj.metadata = metadata
-                    voter1_obj.hash = voter1_obj.compute_hash()
-                    voter1_obj.save()
-                    voters.append(voter1_obj)
-                if voter2_obj.assembly_constituency in auth_officer.assembly_constituencies:
-                    metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {})
-                    metadata.save()
-                    voter2_obj.metadata = metadata
-                    voter2_obj.hash = voter2_obj.compute_hash()
-                    voter2_obj.save()
-                    voters.append(voter2_obj)
+            metadata = Metadata(timestamp=datetime.datetime.now().strftime("%c"),proof = {})
+            metadata.save()
+            voter1_obj.metadata = metadata
+            voter1_obj.hash = voter1_obj.compute_hash()
+            voter1_obj.save()
+            voters.append(voter1_obj)
+            voter2_obj.metadata = metadata
+            voter2_obj.hash = voter2_obj.compute_hash()
+            voter2_obj.save()
+            voters.append(voter2_obj)
 
         try:
-            transaction_data = {"action": "DB_POPULATE ","voter_data": [voter1_obj.to_json(),voter2_obj.to_json()], "timestamp": datetime.datetime.now().strftime("%c")}
-            transaction = Transaction(writer=user['email'],writer_level = user['level'],details = transaction_data)
-            add_transaction(transaction)
-
             global merkle_tree
             voters_repr = list(map(lambda x: repr(x),voters))    
             merkle_tree = MerkleTree([voters_repr[0],])
@@ -117,6 +108,23 @@ class api_db(Resource):
             flash("Couldn't start a session.", category='error')
             return make_response("",400)
 
+class api_show_db(Resource):
+    def get(self):
+        voter_chains=[]
+        
+        for voter in Voter.objects(block_status = 1):
+            voter_chain = []
+            while voter.prev_hash != '0':
+                temp = voter.to_json2()
+                voter_chain.append(temp)
+                voter = voter.backward_ptr
+            temp = voter.to_json2()
+            voter_chain.append(temp)
+            voter_chains.append(voter_chain)
+            
+        res = jsonify(voter_chains)
+        return make_response(res,"200")
+
 # class api_home(Resource):
 #     @login_required
 #     def get(self):
@@ -127,7 +135,7 @@ class api_index(Resource):
     @login_required
     def get(self):
         headers = {'Content-Type': 'text/html'}
-        return make_response(render_template('index.html',user=current_user),200,headers)
+        return make_response(render_template('index.html'),200,headers)
 
 
 class api_search(Resource):
@@ -165,21 +173,8 @@ class api_query_membership(Resource):
     def get(self):
         headers = {'Content-Type': 'text/html'}
         return make_response(render_template('member.html',user=current_user),200,headers)
-
-    # def get(self,voter_id):
-    #     global merkle_tree
-    #     voter_dic = {"EPIC_ID":voter_id}
-    #     voter_str = json.dumps(voter_dic)
-    #     res = data_verification(merkle_tree,voter_str)
-    #     if res:
-    #         print("Waheguru")
-    #         return make_response("Voter data found",200)
-    #     else:
-    #         print("Waheguru Ji")
-    #         return make_response("Voter data not found",400)
      
     def post(self):
-        print("Waheguru")
         content = request.json
         print(content)
         code_str = ['0','0','0','0','0','0','0','0']
@@ -210,33 +205,34 @@ class api_query_membership(Resource):
             new_merkle.extend_tree([new_leaves[i+1],])  
         new_merkle.extend_tree([new_leaves[-1],],to_print=1)              
         query = rep(content,code_str,1)
-        res = data_verification(new_merkle,query)
+        res,audit_trail = data_verification(new_merkle,query)
         print(query)
-        print(res)
+        print(audit_trail)
         if res:
-            return make_response("Voter data found",200)
-        return make_response("Voter data not found",400)
+            audit_trail = list(map(lambda x: x[0],audit_trail))
+            return make_response(jsonify(audit_trail),200)
+        return make_response(audit_trail,400)
         
 
 class api_query_consistency(Resource):
     @login_required
     def get(self,num_voters):
+        num_voters = int(num_voters)
         global merkle_tree
-        print(Voter.objects().order_by('metadata'))
-        print("Waheguru")
         all_voters = Voter.objects().order_by('metadata.timestamp')
-        print(all_voters)
-        print(type(all_voters[0]))
-        print("Waheguru waheguru")
+        greater = False
+        if len(all_voters) < num_voters:
+            greater = True
+            num_voters = len(all_voters)
         voters = []
-        for i in range(int(num_voters)):
+        for i in range(num_voters):
             voters.append(repr(all_voters[i]))
         res = verify_consistency(merkle_tree,voters)
-        if res:
-            print("Waheguru")
+        if res and greater:
+            return make_response("No. of leaves exceeded",204)
+        elif res:
             return make_response("Database is consistent",200)
         else:
-            print("Waheguru Ji")
             return make_response("Database is not consistent",400)
 
 class api_voters(Resource):
@@ -276,10 +272,21 @@ class api_voters(Resource):
             #### ACCESS CHECK - Authorised for action in concerned Constituency ####
             if voter_obj.assembly_constituency in auth_officer.assembly_constituencies:
                 already_present = Voter.objects(EPIC_ID = voter_obj.EPIC_ID, block_status=1).first()
-
                 if already_present:
                     flash('Voter id already registered',category = 'error')
                     return make_response(render_template('insert.html',user=current_user),401,headers)
+
+                name_AO = auth_officer.name
+                path_name =  "~/Desktop/keys/"+name_AO+".txt"
+                f = open (os.path.expanduser(path_name))
+                private_key = f.read().encode("utf-8")
+                priv_key = RSA.importKey(private_key)
+                signer = PKCS1_v1_5.new(priv_key)
+                data = voter_obj.to_json_complete()
+                data = json.dumps(data)
+                h = SHA256.new(data.encode("utf8"))
+                signature = signer.sign(h)
+                voter_obj.signature = signature
 
                 metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {})
                 metadata.save()
@@ -308,13 +315,36 @@ class api_voter(Resource):
         if voter_obj:
             user = current_user
             action = "SEARCH_2"
+            print(voter_obj.metadata.writer)
+            ao_user = Authorised_Officer.objects(email = voter_obj.metadata.writer).first()
+            pub_key = ao_user.public_key.encode('utf-8')
+            pub_key = RSA.importKey(pub_key)
+            verifier = PKCS1_v1_5.new(pub_key)
+
             #### ACCESSS CHECK - Authorised Officer ####
             if user.level >= query_level[action]:
                 auth_officer = user.level_2_id
                 #### ACCESS CHECK - Authorised for action in concerned Constituency ####
                 if voter_obj.assembly_constituency in auth_officer.assembly_constituencies:
-                    return make_response(jsonify(voter_obj.to_json_complete()),200)            
-            return make_response(jsonify(voter_obj.to_json()),200)                
+                    search_result = voter_obj.to_json_complete()
+                    search_result = json.dumps(search_result)
+                    h = SHA256.new(search_result.encode("utf8"))
+                    signature = voter_obj.signature
+                    print(signature)
+                    verified = verifier.verify(h,signature)
+                    if verified:
+                        return make_response(voter_obj.to_json_complete(),200)         
+
+            search_result = voter_obj.to_json_complete()
+            search_result = json.dumps(search_result)
+            h = SHA256.new(search_result.encode("utf8"))
+            print(search_result)
+            signature = voter_obj.signature
+            verified = verifier.verify(h,signature)
+            if verified:
+                print("Signature verified")
+                return make_response(jsonify(voter_obj.to_json()),200)    
+            print("Signature not verified")            
         return make_response("Voter data not found",404)
 
     @login_required
@@ -334,7 +364,22 @@ class api_voter(Resource):
                 for key in content:
                     prev_content[key] = content[key]
                 new_voter_obj = Voter(**prev_content)
-                metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {})
+
+                name_AO = auth_officer.name
+                path_name =  "~/Desktop/keys/"+name_AO+".txt"
+                f = open (os.path.expanduser(path_name))
+                private_key = f.read().encode("utf-8")
+                priv_key = RSA.importKey(private_key)
+                signer = PKCS1_v1_5.new(priv_key)
+                data = new_voter_obj.to_json_complete()
+                data = json.dumps(data)
+                h = SHA256.new(data.encode("utf8"))
+                signature = signer.sign(h)
+                new_voter_obj.signature = signature
+
+                metadata = Metadata(writer=user,timestamp=datetime.datetime.now().strftime("%c"),proof = {})
+                print(type(user))
+                print(user)
                 metadata.save()
                 new_voter_obj.metadata = metadata
                 new_voter_obj.backward_ptr = voter_obj
@@ -374,6 +419,19 @@ class api_voter(Resource):
             if voter_obj.assembly_constituency in auth_officer.assembly_constituencies:
                 prev_content = voter_obj.to_json_complete()
                 new_voter_obj = Voter(**prev_content)
+
+                name_AO = auth_officer.name
+                path_name =  "~/Desktop/keys/"+name_AO+".txt"
+                f = open (os.path.expanduser(path_name))
+                private_key = f.read().encode("utf-8")
+                priv_key = RSA.importKey(private_key)
+                signer = PKCS1_v1_5.new(priv_key)
+                data = new_voter_obj.to_json_complete()
+                data = json.dumps(data)
+                h = SHA256.new(data.encode("utf8"))
+                signature = signer.sign(h)
+                new_voter_obj.signature = signature
+
                 metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {})
                 metadata.save()
                 new_voter_obj.metadata = metadata
@@ -404,29 +462,34 @@ class api_voter(Resource):
 class api_signup(Resource):
     def get(self):
         headers = {'Content-Type': 'text/html'}
-        return make_response(render_template('signup.html',user=current_user),200,headers)
+        return make_response(render_template('signup.html'),200,headers)
 
     def post(self):
         first_entry = request.form.get('firstName')
         email = request.form.get('email')
         password1 = request.form.get('password1')
         password2 = request.form.get('password2')  
-        is_voter = request.form.get('voter')
-         
+        is_voter = int(request.form.get('voter'))
         headers = {'Content-Type': 'text/html'}
         user = User.objects(email = email).first()
         if user:
             flash('Email id already registered.', category='error')
+            print('Email id already registered.')
         elif not is_voter and len(first_entry) < 2:
             flash('Name must be greater than 1 character.', category='error')
+            print('Name must be greater than 1 character.')
         elif is_voter and len(first_entry) < 10:
             flash('EPIC ID must contain 10 characters.', category='error')
+            print('EPIC ID must contain 10 characters.')
         elif len(email) < 4:
             flash('Email must be greater than 3 characters.', category='error')
+            print('Email must be greater than 3 characters.')
         elif password1 != password2:
             flash('Passwords don\'t match.', category='error')
+            print('Passwords don\'t match.')
         elif len(password1) < 7:
             flash('Password must be at least 7 characters.', category='error')
+            print('Password must be at least 7 characters.')
         elif is_voter:
             voter = Voter.objects(EPIC_ID = first_entry).first()
             if voter:
@@ -434,35 +497,45 @@ class api_signup(Resource):
                 user.hash_password()
                 user.save()
                 flash('User created successfully!', category='success')
-                return make_response(render_template('login.html',user=current_user),204,headers)
+                return make_response(render_template('login.html'),204,headers)
             else:
                 flash('EPIC ID is invalid', category = 'error')
-                return make_response(render_template('signup.html',user=current_user),400,headers)
+                return make_response(render_template('signup.html'),400,headers)
         else:
             user = User(email = email, password = password1)
             user.hash_password()
             user.save()
             flash('User created successfully!', category='success')
-            return make_response(render_template('login.html',user=current_user),204,headers)
-        return make_response(render_template('signup.html',user=current_user),400,headers)
+            return make_response(render_template('login.html'),204,headers)
+        return make_response(render_template('signup.html'),400,headers)
 
 
 class api_login(Resource):
     def get(self):
         headers = {'Content-Type': 'text/html'}
-        return make_response(render_template('login.html',user=current_user),200,headers)
+        return make_response(render_template('login.html'),200)
+        # return make_response("",200)
         
     def post(self):
 
         email = request.form.get('email')
         password = request.form.get('password')
+
+        # content = request.json
+        # email = content['email']
+        # password = content['password']
+
+        # email = "hardkaur1632@gmail.com"
+        # password = "random"
+
         user = User.objects(email = email).first()
         headers = {'Content-Type': 'text/html'}
         if user:
             authorized = user.check_password(password)
             if not authorized:
                 flash('Incorrect password, try again.', category='error')
-                return make_response(render_template('login.html',user=current_user),401,headers)
+                # return make_response("",401)
+                return make_response(render_template('login.html'),401)
             flash('Logged in successfully!', category='success')
             expires =  datetime.timedelta(minutes=30)
             access_token = create_access_token(identity = str(user.id),expires_delta = expires)
@@ -476,23 +549,43 @@ class api_login(Resource):
             print(*actions)
             data = {"email":user.email, "registered_voter": user.registered_voter, "level": user.level,"actions":actions,"token":header_val}
             # return make_response(redirect(url_for('api_home')),301,headers)
+            # return make_response("",200)
             return make_response(render_template('home.html',user=current_user,data=data),200,headers)
 
         else:
             flash('User doesn\'t exist.', category='error')
-            return make_response(render_template('login.html',user=current_user),404,headers)
+            # return make_response("",404)
+            return make_response(render_template('login.html'),404,headers)
         
 class api_auth_officer(Resource):
     #### HIGHER LEVEL AUTHORISATION REQUIRED ####
     def post(self):
+        key = RSA.generate(1024)
+        private_key = key.exportKey().decode('utf-8')
+        public_key = key.publickey().exportKey().decode('utf-8')
+
         content = request.json
+        content['public_key'] = public_key
+        print(public_key)
+        pwd = "password"
+        if pwd in content:
+            pwd = content.pop("password")
         auth_off = Authorised_Officer(**content)
         auth_off.save()
+        name_AO = auth_off.name
+        path_name =  "~/Desktop/keys/"+name_AO+".txt"
+        f = open (os.path.expanduser(path_name),'w')
+        f.write(private_key)
+        f.close()
+        print(private_key)
         user = User.objects(email = content['email']).first()
         if user:
-            user.update(level = 2, level_2_id = auth_off)
-        # else:
-        #     add user
+            user.update(level = 2, level_2_id = auth_off, registered_voter = 1)
+        else:
+            user_data = {"email":content['email'],"password":pwd,"level":2,"level_2_id":auth_off}
+            user = User(**user_data)
+            user.hash_password()
+            user.save()
         return make_response("",204)
 
     def put(self):

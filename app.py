@@ -1,4 +1,4 @@
-from flask import Flask,make_response, request, jsonify
+from flask import Flask,make_response, request, jsonify, render_template
 from flask_restful import Api
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, jwt_required
@@ -8,7 +8,6 @@ from d_b import initialize_db
 from blockchain import initialize_blockchain
 from api_constants import mongo_password
 from models import Voter,User
-import urllib
 import os
 
 
@@ -49,13 +48,14 @@ bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
 database_name = "Electoral_Rolls"
-password = urllib.parse.quote_plus(mongo_password)
-DB_URI = "mongodb+srv://HardeepKaur:{}@pythoncluster.6nvxg.mongodb.net/{}?retryWrites=true&w=majority".format(password,database_name)
+DB_URI = "mongodb+srv://HardeepKaur:{}@pythoncluster.6nvxg.mongodb.net/{}?retryWrites=true&w=majority".format(mongo_password,database_name)
 app.config["MONGODB_HOST"] = DB_URI
 
 initialize_db(app)
 initialize_routes(api)
 initialize_blockchain()
+
+
 
 
 if __name__ == '__main__':

@@ -42,7 +42,16 @@
         var num_leaves = document.getElementById('num_leaves').value;
         fetch(ref.concat(num_leaves)).then(res=>{
             console.log(res);
-            document.getElementById('result').value = res.text();
+            if(res.status == '200' || res.status == 200){
+                document.getElementById('result').value = "Database consistent";
+            }
+            else if(res.status == '204' || res.status == 204){
+                document.getElementById('result').value = "No. of blocks exceeded. Database is consistent.";
+            }
+            else{
+                document.getElementById('result').value = "Database is not consistent";
+            }
+                
         });
     }
 </script>

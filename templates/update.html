@@ -211,6 +211,15 @@
             document.getElementById("part_number").value = data['part_number'];
             document.getElementById("part_name").value = data['part_name'];
             document.getElementById("constituency_data").style.display = 'block';
+            document.getElementById("voter_name_2").value = '';
+            document.getElementById("voter_f_name_2").value ="";
+            document.getElementById("voter_age_2").value ="";
+            document.getElementById("voter_gender_2").value ="";
+            document.getElementById("voter_address_2").value ="";
+            document.getElementById("part_name_2").value = "";
+            document.getElementById("part_number_2").value = "";
+            document.getElementById("ac_name_2").value = "";
+            document.getElementById("pc_name_2").value = "";
 
             console.log(data);
         });
@@ -232,6 +241,8 @@
             part_name:  document.getElementById('part_name_2').value
         })}).then(response => {console.log(response); return response});
         });        
+
+
 
 </script>
 

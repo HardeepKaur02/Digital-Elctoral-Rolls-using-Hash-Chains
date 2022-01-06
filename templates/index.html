@@ -1,49 +1,65 @@
-{% extends "base.html" %} {% block title %}Index{% endblock %} {% block
-    content %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+      integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+      crossorigin="anonymous"
+    />
+  </head>
+  <body>
 
-<style>
-    .btn{
-        margin: auto;
-        width: 50%;
-        align-self: center;
-        padding: 20px;
-        text-align: center;
+    <style>
+        .btn{
+            margin: auto;
+            width: 50%;
+            align-self: center;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        </style>
+        
+
+    <div class="container bg-dark" style="margin: 40px auto;padding: 15px;width: 50%;text-align: center;">
+        <div class="row" id="start"  >
+            <div class="btn" >
+                <button onclick="myfunc()" style="font-size: 22px;"  >Start new session</button>
+            </div>
+        </div>
+        <div class="row" id="signup" style="display: none;">
+            <div class="btn " >
+                <button onclick="document.location = 'http://127.0.0.1:5000/api/auth/signup' " style="font-size: 22px;" >Sign Up</button>
+            </div>
+        </div>
+        <div class="row" id="login" style="display: none;">
+            <div class="btn " >
+                <button onclick="document.location = 'http://127.0.0.1:5000/api/auth/login' " style="font-size: 22px;" >Log In</button>
+            </div>
+        </div>
+
+
+    </div>
+
+    <script>
+
+
+        function myfunc(){
+            var ref = 'http://127.0.0.1:5000/api/db_populate';
+            fetch(ref).then(res => console.log(res));
+            document.getElementById('start').style.display = 'none';
+            document.getElementById('signup').style.display = 'block';
+            document.getElementById('login').style.display = 'block';
+
     }
-    
-    </style>
-    
-
-<div class="container bg-dark" style="margin: 40px auto;padding: 15px;width: 50%;text-align: center;">
-    <div class="row" id="start"  >
-        <div class="btn" >
-            <button onclick="myfunc()" style="font-size: 22px;"  >Start new session</button>
-        </div>
-    </div>
-    <div class="row" id="signup" style="display: none;">
-        <div class="btn " >
-            <button onclick="document.location = 'http://127.0.0.1:5000/api/auth/signup' " style="font-size: 22px;" >Sign Up</button>
-        </div>
-    </div>
-    <div class="row" id="login" style="display: none;">
-        <div class="btn " >
-            <button onclick="document.location = 'http://127.0.0.1:5000/api/auth/login' " style="font-size: 22px;" >Log In</button>
-        </div>
-    </div>
-
-
-</div>
-
-<script>
-
-
-    function myfunc(){
-        var ref = 'http://127.0.0.1:5000/api/db_populate';
-        fetch(ref).then(res => console.log(res));
-        document.getElementById('start').style.display = 'none';
-        document.getElementById('signup').style.display = 'block';
-        document.getElementById('login').style.display = 'block';
-
-}
-</script>
-
-{% endblock %}
+    </script>
+</body>
+</html>

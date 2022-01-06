@@ -148,7 +148,7 @@ def data_verification(merkle_tree, leaf_data):
     print(leaf_hash)
     print(audit_trail)
     res = verify_audit_trail(leaf_hash,audit_trail)
-    return res
+    return res,audit_trail
 
 def verify_audit_trail(chunk_hash, audit_trail):
     """
@@ -233,7 +233,6 @@ def rep(voter_obj,code_str,is_dic=0,active=1):
     if(code_str[7]=='1'):
         dic["parliamentary_constituency"]=voter_obj.parliamentary_constituency
     if active!=1:
-        print("waheguru maharaj")
         dic["block_status"]=active
     return json.dumps(dic)
 
