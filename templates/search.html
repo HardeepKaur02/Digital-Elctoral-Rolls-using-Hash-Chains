@@ -106,7 +106,14 @@
     document.getElementById('Search_btn').addEventListener('click', function(event) {
         var ref = 'http://127.0.0.1:5000/api/voters/';
         var voter_id = document.getElementById("epicno").value;
-        fetch(ref.concat(voter_id)).then(response => response.json()).then(data => {
+        fetch(ref.concat(voter_id)).then(response => { console.log(response);
+            if(response.status == "404" || response.status == 404){
+                alert("Voter doesn't exist");  
+            }
+            else if(response.status == "400" || response.status == 400){
+                alert("Digital signature verification failed!");  
+            };
+            response.json()}).then(data => {
             document.getElementById("voter_name").value = data.name;
             document.getElementById("voter_f_name").value = data['father_name'];
             document.getElementById("voter_age").value = data.age;
@@ -114,8 +121,8 @@
             document.getElementById("ac_name").value = data['assembly_constituency'];
             document.getElementById("pc_name").value = data['parliamentary_constituency'];
             document.getElementById("constituency_data").style.display = 'block';
-
             console.log(data);
+
         });
         });        
         document.getElementById('Reset_btn').addEventListener('click', function(event) {

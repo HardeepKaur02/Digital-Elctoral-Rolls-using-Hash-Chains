@@ -330,21 +330,25 @@ class api_voter(Resource):
                     search_result = json.dumps(search_result)
                     h = SHA256.new(search_result.encode("utf8"))
                     signature = voter_obj.signature
-                    print(signature)
+                    # print(signature)
                     verified = verifier.verify(h,signature)
                     if verified:
+                        print("Signature verified")
+                        ### this search returns entire data, though all of it is not displayed on interface
                         return make_response(voter_obj.to_json_complete(),200)         
 
             search_result = voter_obj.to_json_complete()
             search_result = json.dumps(search_result)
             h = SHA256.new(search_result.encode("utf8"))
-            print(search_result)
+            # print(search_result)
             signature = voter_obj.signature
             verified = verifier.verify(h,signature)
             if verified:
                 print("Signature verified")
                 return make_response(jsonify(voter_obj.to_json()),200)    
-            print("Signature not verified")            
+            else:
+                print("Signature not verified")  
+                return make_response("Couldn't verify signature",400)          
         return make_response("Voter data not found",404)
 
     @login_required

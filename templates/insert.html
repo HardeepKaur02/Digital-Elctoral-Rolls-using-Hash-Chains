@@ -165,7 +165,14 @@
             part_name:  document.getElementById('part_name').value,
             block_status: 1,
             prev_hash: '0'
-        })}).then(response => {console.log(response);return response});
+        })}).then(response => {console.log(response);
+            if(response.status == "200" || response.status == 200){
+                alert("Voter added successfully");  
+            }
+            else{
+                alert("Failed to add voter");
+            };
+            return response});
         });        
 
 </script>
