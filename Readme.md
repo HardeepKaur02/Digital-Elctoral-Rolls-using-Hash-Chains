@@ -2,7 +2,7 @@ Digital Electoral Rolls
 
 This is an attempt towards implementing Digital Electoral Rolls in a privacy preserving manner. It uses cryptographic primitives like digital signatures, hash pointers, merkle trees, immutable ledger and append only database to provide non-repudiation, auditability, tamper evidence, immutabililty and data integrity.  
 
-Setup
+Setup: 
 Follow the given steps to make this code work: 
 
 1. Ensure that you have python on your system.
