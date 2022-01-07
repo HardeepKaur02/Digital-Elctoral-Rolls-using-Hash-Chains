@@ -113,7 +113,7 @@
             else if(response.status == "400" || response.status == 400){
                 alert("Digital signature verification failed!");  
             };
-            response.json()}).then(data => {
+            return response.json()}).then(data => {
             document.getElementById("voter_name").value = data.name;
             document.getElementById("voter_f_name").value = data['father_name'];
             document.getElementById("voter_age").value = data.age;
@@ -125,15 +125,17 @@
 
         });
         });        
-        document.getElementById('Reset_btn').addEventListener('click', function(event) {
-            document.getElementById("voter_name").value = '';
-            document.getElementById("voter_f_name").value ="";
-            document.getElementById("voter_age").value ="";
-            document.getElementById("voter_data").style.display = 'none';
-            document.getElementById("ac_name").value = "";
-            document.getElementById("pc_name").value = "";
-            document.getElementById("constituency_data").style.display = 'none';
-        });
+    document.getElementById('Reset_btn').addEventListener('click', function(event) {
+        document.getElementById("voter_name").value = '';
+        document.getElementById("voter_f_name").value ="";
+        document.getElementById("voter_age").value ="";
+        document.getElementById("voter_data").style.display = 'none';
+        document.getElementById("ac_name").value = "";
+        document.getElementById("pc_name").value = "";
+        document.getElementById("constituency_data").style.display = 'none';
+        document.getElementById("epicno").value = "";
+        
+    });
 
 </script>
 

@@ -2,7 +2,7 @@ from apis import api_auth_officer, api_merkle_tree, api_query_consistency, api_q
 from blockchain import api_immutable_database
 
 def initialize_routes(api):
-    api.add_resource(api_db, '/api/db_populate')
+    api.add_resource(api_db, '/api/init_merkle')
     api.add_resource(api_voters, '/api/voters')
     api.add_resource(api_voter, '/api/voters/<voter_id>')
     api.add_resource(api_signup, '/api/auth/signup')

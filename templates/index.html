@@ -53,12 +53,11 @@
 
 
         function myfunc(){
-            var ref = 'http://127.0.0.1:5000/api/db_populate';
+            var ref = 'http://127.0.0.1:5000/api/init_merkle';
             fetch(ref).then(res => console.log(res));
             document.getElementById('start').style.display = 'none';
             document.getElementById('signup').style.display = 'block';
             document.getElementById('login').style.display = 'block';
-            document.getElementById('alert').style.display = 'block';
     }
     </script>
 </body>

@@ -39,10 +39,16 @@ POST /api/db_populate -> adds voters to db in bulk and returns 201 success code 
 valid_actions = ["SEARCH","INSERT","UPDATE","DELETE","QUERY_DATABASE","QUERY_CONSISTENCY","SHOW_DB"]
 query_level = {"SEARCH":1, "INSERT":2, "UPDATE":2, "DELETE":2, "SEARCH_2": 2, "GET_ALL":2,"QUERY_DATABASE":1,"QUERY_CONSISTENCY":2,"SHOW_DB":2}
 
-#### JUST FOR CONVENIENCE WHILE TESTING ####
+#### JUST FOR CONVENIENCE WHILE TESTING, DATABASE IS POPULATED USING SIGNATURE OF A HARD-CODED AO ####
 class api_db(Resource):
     # @login_required
     def get(self): ### insert voters in bulk
+        name_AO = "Hardeep Kaur"
+        path_name =  "~/Desktop/keys/"+name_AO+".txt"
+        f = open (os.path.expanduser(path_name))
+        private_key = f.read().encode("utf-8")
+        priv_key = RSA.importKey(private_key)
+        signer = PKCS1_v1_5.new(priv_key)
         
         id = 1230001
         voters = []
@@ -63,6 +69,12 @@ class api_db(Resource):
                 parliamentary_constituency = "Fatehgarh Sahib",
                 signature = bytes("", 'utf-8')
             )
+            data = voter1_obj.to_json_complete()
+            data = json.dumps(data)
+            h = SHA256.new(data.encode("utf8"))
+            signature = signer.sign(h)
+            voter1_obj.signature = signature
+
 
             voter2_obj = Voter(
                 EPIC_ID = id2,
@@ -77,7 +89,13 @@ class api_db(Resource):
                 parliamentary_constituency = "Fatehgarh Sahib",
                 signature = bytes("", 'utf-8')
             )
-            metadata = Metadata(timestamp=datetime.datetime.now().strftime("%c"),proof = {})
+            data = voter2_obj.to_json_complete()
+            data = json.dumps(data)
+            h = SHA256.new(data.encode("utf8"))
+            signature = signer.sign(h)
+            voter2_obj.signature = signature
+
+            metadata = Metadata(writer = "hardeep@gmail.com", timestamp=datetime.datetime.now().strftime("%c"),proof = {})
             metadata.save()
             voter1_obj.metadata = metadata
             voter1_obj.hash = voter1_obj.compute_hash()
@@ -125,11 +143,6 @@ class api_show_db(Resource):
         res = jsonify(voter_chains)
         return make_response(res,"200")
 
-# class api_home(Resource):
-#     @login_required
-#     def get(self):
-#         headers = {'Content-Type': 'text/html'}
-#         return make_response(render_template('home.html',user=current_user),200,headers)
 
 class api_index(Resource):
     @login_required
@@ -199,6 +212,10 @@ class api_query_membership(Resource):
         new_leaves = []
         for i in range(len(merkle_tree.obj_history)):
             new_leaves.append(rep(merkle_tree.obj_history[i],code_str,active=merkle_tree.obj_status[i]))
+        # all_voters = Voter.objects().order_by('metadata.timestamp')
+        # for i in range(len(all_voters)):
+        #     new_leaves.append(rep(all_voters[i],code_str,active=merkle_tree.obj_status[i]))
+
         print(new_leaves)
         new_merkle = MerkleTree([new_leaves[0],])
         for i in range(len(new_leaves)-2):
@@ -220,6 +237,7 @@ class api_query_consistency(Resource):
         num_voters = int(num_voters)
         global merkle_tree
         all_voters = Voter.objects().order_by('metadata.timestamp')
+        # all_voters = merkle_tree.obj_history
         greater = False
         if len(all_voters) < num_voters:
             greater = True
@@ -254,10 +272,6 @@ class api_voters(Resource):
             return make_response(jsonify(voters),200)
         return make_response("Unauthorised Action!",401)
 
-    # @login_required
-    # def get(self):
-    #     headers = {'Content-Type': 'text/html'}
-    #     return make_response(render_template('insert.html',user=current_user),200,headers)
 
     @login_required
     def post(self):  ### insert a single voter
@@ -285,6 +299,7 @@ class api_voters(Resource):
                 data = voter_obj.to_json_complete()
                 data = json.dumps(data)
                 h = SHA256.new(data.encode("utf8"))
+                print(h)
                 signature = signer.sign(h)
                 voter_obj.signature = signature
 
@@ -381,7 +396,7 @@ class api_voter(Resource):
                 signature = signer.sign(h)
                 new_voter_obj.signature = signature
 
-                metadata = Metadata(writer=user,timestamp=datetime.datetime.now().strftime("%c"),proof = {})
+                metadata = Metadata(writer=user['email'],timestamp=datetime.datetime.now().strftime("%c"),proof = {})
                 print(type(user))
                 print(user)
                 metadata.save()
@@ -447,19 +462,19 @@ class api_voter(Resource):
                 global merkle_tree
                 merkle_tree.extend_tree([repr(new_voter_obj)])
                 merkle_tree.obj_history.append(new_voter_obj)
-                merkle_tree.obj_status.append(1)
+                merkle_tree.obj_status.append(2)
 
                 update_meta = {"block_status":0}
                 voter_obj.update(**update_meta)
                 j = merkle_tree.obj_history.index(voter_obj)
-                merkle_tree.obj_status[j]=2
+                merkle_tree.obj_status[j]=0
                 
                 transaction_data = {"action": "DELETE","voter_data": new_voter_obj.to_json(), "timestamp": datetime.datetime.now().strftime("%c")}
                 transaction = Transaction(writer=user['email'],writer_level = user['level'],details = transaction_data)
                 add_transaction(transaction)
                 flash("Data deleted successfully",category='success')
                 return make_response("Success",200)
-        flash("Updation failed",category='error')
+        flash("Deletion failed",category='error')
         return make_response("Unauthorised Action!",401)
 
 
@@ -518,19 +533,11 @@ class api_login(Resource):
     def get(self):
         headers = {'Content-Type': 'text/html'}
         return make_response(render_template('login.html'),200)
-        # return make_response("",200)
         
     def post(self):
 
         email = request.form.get('email')
         password = request.form.get('password')
-
-        # content = request.json
-        # email = content['email']
-        # password = content['password']
-
-        # email = "hardkaur1632@gmail.com"
-        # password = "random"
 
         user = User.objects(email = email).first()
         headers = {'Content-Type': 'text/html'}
@@ -552,8 +559,6 @@ class api_login(Resource):
                     actions.append(action)
             print(*actions)
             data = {"email":user.email, "registered_voter": user.registered_voter, "level": user.level,"actions":actions,"token":header_val}
-            # return make_response(redirect(url_for('api_home')),301,headers)
-            # return make_response("",200)
             return make_response(render_template('home.html',user=current_user,data=data),200,headers)
 
         else:
@@ -595,12 +600,23 @@ class api_auth_officer(Resource):
     def put(self):
         content = request.json ## data to be updated
         auth_off = Authorised_Officer.objects(auth_id = content['auth_id']).first()
+
+        key = RSA.generate(1024)
+        private_key = key.exportKey().decode('utf-8')
+        public_key = key.publickey().exportKey().decode('utf-8')
+        content.pop("auth_id")
+        content['public_key'] = public_key
+        print(public_key)
+
+        name_AO = auth_off.name
+        print(name_AO)
+        path_name =  "~/Desktop/keys/"+name_AO+".txt"
+        f = open (os.path.expanduser(path_name),'w')
+        f.write(private_key)
+        f.close()
+        print(private_key)
+
         auth_off.update(**content)
-        # user_id = get_jwt_identity()
-        # user = User.objects.get(id=user_id)
-        # transaction_data = {"action": "UPDATE AUTHORISED OFFICER DATA","data": auth_off.to_json(), "timestamp": datetime.datetime.now().strftime("%c")}
-        # transaction = Transaction(writer=user['email'],writer_level = user['level'],details = transaction_data)
-        # add_transaction(transaction)
         return make_response("",204)
 
 
